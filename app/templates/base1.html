@@ -1,0 +1,491 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}ByTaiwan{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+    <style>
+        :root {
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --hover-bg: #f8f9ff;
+            --card-radius: 12px;
+            --btn-radius: 10px;
+            --table-padding: 24px 28px;
+            --title-size: 38.4px !important;
+            --subtitle-size: 26.4px !important;
+            --table-size: 24.0px !important;
+            --btn-size: 21.6px !important;
+        }
+
+        /* ===== 全域背景 ===== */
+        body {
+            background-color: #f5f5f5 !important;
+            font-size: var(--table-size) !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ===== 導覽列 - 深紫色單色 ===== */
+        .navbar-custom {
+            background: #2d1f5e !important;
+            border: none !important;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
+            margin-bottom: 0 !important;
+            padding: 0 !important;
+        }
+        .navbar-custom .navbar-brand {
+            color: white !important;
+            font-weight: 700 !important;
+            font-size: 26.4px !important;
+        }
+        .navbar-custom .navbar-nav > li > a {
+            color: rgba(255,255,255,0.9) !important;
+            font-size: 21.6px !important;
+            border-radius: 8px !important;
+            padding: 8px 16px !important;
+            margin: 4px 2px !important;
+            transition: all 0.2s ease !important;
+        }
+        .navbar-custom .navbar-nav > li > a:hover {
+            background: rgba(255,255,255,0.15) !important;
+            color: white !important;
+        }
+        .navbar-custom .navbar-nav li a.active {
+            background-color: rgba(255,255,255,0.25) !important;
+            color: white !important;
+        }
+        .logout-btn {
+            background-color: rgba(255,255,255,0.2) !important;
+            color: white !important;
+            padding: 8px 15px !important;
+            border-radius: 8px !important;
+            font-size: 21.6px !important;
+        }
+        .logout-btn:hover {
+            background-color: rgba(255,255,255,0.35) !important;
+        }
+
+        /* ===== 內容區 - 與導覽列之間留白 ===== */
+        .container-fluid {
+            padding-top: 28px !important;
+            padding-bottom: 40px !important;
+        }
+
+        /* ===== 頁首標題列 - 紫色漸層 ===== */
+        .page-header-bar {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            padding: 28px 36px !important;
+            border-radius: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .page-header-bar h2 {
+            font-size: var(--subtitle-size) !important;
+            margin: 0 !important;
+            color: white !important;
+        }
+
+        /* ===== 篩選表單區 - 淺灰白背景 ===== */
+        .filter-form {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 24px !important;
+            padding: 28px 32px !important;
+            background: #ffffff !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08) !important;
+            border: 1px solid #e0e5ef !important;
+        }
+        .filter-form .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+            flex: 1;
+        }
+        .filter-form .filter-btn {
+            font-size: 24.0px !important;
+            padding: 14px 36px !important;
+            border-radius: var(--btn-radius) !important;
+            min-width: 120px !important;
+            text-align: center !important;
+        }
+        .filter-form .filter-group label {
+            font-size: 19.2px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            color: #444 !important;
+        }
+        .filter-form .form-control {
+            border-radius: 8px !important;
+            border: 2px solid #e0e5ef !important;
+            font-size: 24.0px !important;
+            padding: 16px 16px !important;
+            min-height: 60px !important;
+            line-height: 1.4 !important;
+            transition: border-color 0.2s ease !important;
+        }
+        .filter-form .form-control:focus {
+            border-color: var(--gradient-start) !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+        }
+        .filter-form .btn {
+            font-size: var(--btn-size) !important;
+            padding: 12px 20px !important;
+            border-radius: var(--btn-radius) !important;
+        }
+        .filter-form .filter-btn {
+            font-size: 24.0px !important;
+            padding: 14px 32px !important;
+            border-radius: var(--btn-radius) !important;
+            min-width: 120px !important;
+            text-align: center !important;
+        }
+
+        /* ===== 操作列 ===== */
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px !important;
+            padding: 16px 32px !important;
+        }
+        .action-bar a.btn-gradient,
+        .action-bar button.btn-gradient,
+        .action-bar button.btn-gradient-sm,
+        .action-bar a.btn-gradient-sm {
+            flex: 1;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        /* ===== 內容卡片區 - 白色 ===== */
+        .card-container {
+            background: white !important;
+            border: 0 !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+            padding: 24px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* ===== 表格區 ===== */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--card-radius);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            background: white;
+            border: 1px solid #e0e5ef;
+        }
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--table-size) !important;
+        }
+        .styled-table thead th {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            padding: var(--table-padding) !important;
+            font-weight: 600 !important;
+            font-size: 24.0px !important;
+            text-align: center;
+            white-space: nowrap;
+            border: none !important;
+        }
+        .styled-table tbody td {
+            padding: var(--table-padding) !important;
+            border-bottom: 1px solid #eef1f7 !important;
+            vertical-align: middle !important;
+            font-size: var(--table-size) !important;
+        }
+        .styled-table tbody tr:hover {
+            background-color: var(--hover-bg) !important;
+        }
+        .styled-table tbody tr:last-child td {
+            border-bottom: none !important;
+        }
+        .styled-table .form-control {
+            font-size: 24.0px !important;
+            padding: 6px 10px !important;
+            border-radius: 6px !important;
+        }
+        .styled-table .btn {
+            font-size: 19.2px !important;
+            padding: 6px 12px !important;
+            border-radius: 6px !important;
+        }
+        .gw-list-column {
+            white-space: normal !important;
+        }
+
+        /* ===== 按鈕 ===== */
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: var(--btn-radius) !important;
+            padding: 12px 28px !important;
+            font-size: var(--btn-size) !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            text-decoration: none !important;
+            display: inline-block !important;
+        }
+        .btn-gradient:hover {
+            background: var(--hover-bg) !important;
+            color: var(--gradient-start) !important;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+            text-decoration: none !important;
+        }
+        .btn-gradient.active {
+            background: linear-gradient(135deg, #5a6fd6, #6a4190) !important;
+            color: white !important;
+        }
+        .btn-gradient-sm {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: var(--btn-radius) !important;
+            padding: 8px 18px !important;
+            font-size: 21.6px !important;
+            font-weight: 600 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            text-decoration: none !important;
+            display: inline-block !important;
+        }
+        .btn-gradient-sm:hover {
+            background: var(--hover-bg) !important;
+            color: var(--gradient-start) !important;
+        }
+
+        /* ===== 分頁 ===== */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 24px !important;
+            padding: 16px 0;
+        }
+        .pagination-wrapper .page-link {
+            background: white !important;
+            color: var(--gradient-start) !important;
+            border: 2px solid #e0e5ef !important;
+            border-radius: 8px !important;
+            padding: 8px 16px !important;
+            font-size: 21.6px !important;
+            font-weight: 600 !important;
+            text-decoration: none !important;
+            transition: all 0.2s ease !important;
+        }
+        .pagination-wrapper .page-link:hover {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            border-color: var(--gradient-start) !important;
+        }
+        .pagination-wrapper .page-item.active .page-link {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            border-color: transparent !important;
+        }
+        .pagination-wrapper .page-item.disabled .page-link {
+            color: #aaa !important;
+            background: #f9f9f9 !important;
+            border-color: #e0e5ef !important;
+            cursor: not-allowed;
+        }
+
+        /* ===== Modal ===== */
+        .modal-content {
+            border-radius: var(--card-radius) !important;
+            border: 0 !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            color: white !important;
+            border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+            padding: 16px 24px !important;
+        }
+        .modal-header .modal-title {
+            color: white !important;
+            font-size: 26.4px !important;
+        }
+        .modal-header .close {
+            color: white !important;
+            opacity: 0.8 !important;
+        }
+        .modal-header .close:hover {
+            opacity: 1 !important;
+        }
+        .modal-body {
+            padding: 24px !important;
+        }
+        .modal-footer {
+            padding: 16px 24px !important;
+        }
+        .modal-body .form-control {
+            border-radius: 8px !important;
+            border: 2px solid #e0e5ef !important;
+            font-size: 24.0px !important;
+            padding: 10px 14px !important;
+        }
+        .modal-body .form-control:focus {
+            border-color: var(--gradient-start) !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+        }
+        .modal-body label {
+            font-weight: 600 !important;
+            font-size: 21.6px !important;
+            margin-bottom: 6px !important;
+        }
+
+        /* ===== 一般表單 ===== */
+        .form-control {
+            border-radius: 8px !important;
+            border: 2px solid #e0e5ef !important;
+            font-size: 24.0px !important;
+            padding: 14px 16px !important;
+            min-height: 54px !important;
+            line-height: 1.4 !important;
+        }
+        .form-control:focus {
+            border-color: var(--gradient-start) !important;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+        }
+        label {
+            font-weight: 600 !important;
+            font-size: 21.6px !important;
+        }
+
+        /* ===== 警示 ===== */
+        .alert {
+            border-radius: var(--card-radius) !important;
+            font-size: 24.0px !important;
+        }
+        .alert-warning {
+            background-color: #fff3cd !important;
+            border: 2px solid #ffc107 !important;
+            border-radius: var(--card-radius) !important;
+            color: #856404 !important;
+            font-size: 21.6px !important;
+        }
+
+        /* ===== 登入/註冊卡片 ===== */
+        .auth-card {
+            background: white !important;
+            border: 0 !important;
+            border-radius: var(--card-radius) !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+            padding: 40px !important;
+            margin-top: 60px !important;
+        }
+        .auth-card h1 {
+            font-size: var(--title-size) !important;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-clip: text !important;
+            text-align: center !important;
+            margin-bottom: 32px !important;
+        }
+
+        /* ===== 列表群組 ===== */
+        .list-group-item {
+            border-radius: 8px !important;
+            margin-bottom: 8px !important;
+            border: 1px solid #e0e5ef !important;
+            font-size: var(--table-size) !important;
+        }
+        .list-group-item:hover {
+            background-color: var(--hover-bg) !important;
+        }
+
+        /* ===== 一般 h2 ===== */
+        h2 {
+            font-size: var(--subtitle-size) !important;
+        }
+
+        /* ===== hr ===== */
+        hr {
+            border-color: #e0e5ef !important;
+        }
+
+        /* ===== 合約隱藏列 ===== */
+        .contract-row {
+            display: none;
+            background-color: #f8f9ff !important;
+        }
+    </style>
+{% endblock %}
+
+{% block navbar %}
+<div class="navbar-custom navbar-inverse" role="navigation">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center" style="width: 100%;">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="sr-only">切換導航</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="{{ url_for('main.index') }}">案場管理系統</a>
+            </div>
+            <div class="d-flex" style="flex-grow: 1; justify-content: center;">
+                <ul class="nav navbar-nav" style="margin-left: auto; margin-right: auto; gap: 15px;">
+                    <li><a href="{{ url_for('main.site_management') }}" class="{% if request.endpoint == 'main.site_management' %}active{% endif %}">案場管理</a></li>
+                    <li><a href="{{ url_for('main.platforms') }}" class="{% if request.endpoint == 'main.platforms' %}active{% endif %}">站台列表</a></li>
+                    <li><a href="{{ url_for('main.client_management') }}" class="{% if request.endpoint == 'main.client_management' %}active{% endif %}">客戶管理</a></li>
+                    <li><a href="{{ url_for('main.material_management') }}" class="{% if request.endpoint == 'main.material_management' %}active{% endif %}">物料管理</a></li>
+                    <li><a href="{{ url_for('main.rma_records') }}" class="{% if request.endpoint == 'main.rma_records' %}active{% endif %}">RMA 紀錄</a></li>
+                    <li><a href="{{ url_for('main.maintenance_records') }}" class="{% if request.endpoint == 'main.maintenance_records' %}active{% endif %}">維運紀錄</a></li>
+                    <li><a href="{{ url_for('main.travel_records') }}" class="{% if request.endpoint == 'main.travel_records' %}active{% endif %}">出差紀錄</a></li>
+                    <li><a href="{{ url_for('main.contract_management') }}" class="{% if request.endpoint == 'main.contract_management' %}active{% endif %}">合約管理</a></li>
+                    <!-- 新增 SIM 卡狀態導覽 -->
+                    <li><a href="{{ url_for('main.simcard_status') }}" class="{% if request.endpoint == 'main.simcard_status' %}active{% endif %}">SIM 卡狀態</a></li>
+                    <!-- 新增金鑰申請導覽 -->
+                    <li><a href="{{ url_for('main.key_application') }}" class="{% if request.endpoint == 'main.key_application' %}active{% endif %}">金鑰申請</a></li>
+                    <!-- 新增電表查詢導覽 -->
+                    <li><a href="{{ url_for('main.search_taipower_records') }}" class="{% if request.endpoint == 'main.search_taipower_records' %}active{% endif %}">電表查詢</a></li>
+                    <!-- 新增confluencepage導覽 -->
+                    <li> <a href="{{ url_for('main.confluence_overview') }}" class="{% if request.endpoint=='main.confluence_overview' %}active{% endif %}">專案管理</a></li>
+                </ul>
+            </div>
+            <ul class="nav navbar-nav navbar-right" style="margin: 0; padding: 0;">
+                {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('auth.logout') }}" class="logout-btn">登出</a></li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">登入</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        {{ message }}
+    </div>
+    {% endfor %}
+
+    {% block page_content %}{% endblock %}
+
+    <div class="row">
+        <div class="footer text-center" style="height: 50px;"></div>
+    </div>
+</div>
+{% endblock %}

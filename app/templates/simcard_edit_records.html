@@ -1,0 +1,72 @@
+{% extends "base1.html" %}
+
+{% block title %}
+SIM 卡編輯紀錄
+{% endblock %}
+
+{% block page_content %}
+<div class="container mt-5">
+    <h2>SIM 卡編輯紀錄</h2>
+
+    <!-- 篩選表單區塊 -->
+    <div class="row">
+        <div class="col-12">
+            <form method="GET" action="{{ url_for('main.simcard_edit_records') }}" class="form-inline mb-4">
+                <!-- PID 篩選 -->
+                <div class="form-group mr-3 mb-2">
+                    <label for="pid" class="mr-2">PID:</label>
+                    <input type="text" class="form-control" id="pid" name="pid" value="{{ pid_filter }}">
+                </div>
+                <!-- ICCID 篩選 -->
+                <div class="form-group mr-3 mb-2">
+                    <label for="iccid" class="mr-2">ICCID:</label>
+                    <input type="text" class="form-control" id="iccid" name="iccid" value="{{ iccid_filter }}">
+                </div>
+                <!-- 篩選 & 重置按鈕 -->
+                <button type="submit" class="btn btn-primary mb-2 mr-2">篩選</button>
+                <a href="{{ url_for('main.simcard_edit_records') }}" class="btn btn-secondary mb-2">重置</a>
+            </form>
+        </div>
+    </div>
+
+    <hr>
+
+    <!-- 表格區塊 -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>原 PID</th>
+                        <th>原 ICCID</th>
+                        <th>原 狀態 (active/suspend/dead)</th>
+                        <th>原 Group</th>
+                        <th>更新人</th>
+                        <th>更新時間</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in records %}
+                    <tr>
+                        <td>{{ rec.id }}</td>
+                        <td>{{ rec.original_pid }}</td>
+                        <td>{{ rec.original_iccid }}</td>
+                        <td>
+                            {% if rec.original_status in ['active', 'suspend', 'dead'] %}
+                                {{ rec.original_status }}
+                            {% else %}
+                                &ndash;
+                            {% endif %}
+                        </td>
+                        <td>{{ rec.original_group }}</td>
+                        <td>{{ rec.updated_by }}</td>
+                        <td>{{ rec.updated_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

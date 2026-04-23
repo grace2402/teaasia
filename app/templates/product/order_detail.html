@@ -1,0 +1,38 @@
+<!-- app/templates/product/order.html -->
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan - Order{% endblock %}
+
+{% block page_content %}
+        <form>
+  		<input type="button" value="&laquo; Previous" onclick="history.back()">
+		</form>   
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Product_ID</th>
+            <th>Product_Name</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%if order_details %}
+        {% for order_detail in order_details %}
+        <tr>
+            <td>{{ order_detail.product_id }}</td>
+            <td>{{ order_detail.product_name }}</td>
+            <td>${{ order_detail.price }}</td>
+            <td>{{ order_detail.quantity }}</td>
+            <td>${{ order_detail.price | float * order_detail.quantity | int }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td>No orders.</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}

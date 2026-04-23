@@ -1,0 +1,218 @@
+{% extends "base1.html" %}
+
+{% block title %}合約管理{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>合約管理</h2>
+    </div>
+
+    <!-- 篩選表單 -->
+    <form method="get" action="{{ url_for('main.contract_management') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="spot_id_filter">案場名稱</label>
+            <select class="form-control" id="spot_id_filter" name="spot_id_filter">
+                <option value="">所有案場</option>
+                {% for spot in spots %}
+                <option value="{{ spot.id }}" {% if request.args.get('spot_id_filter') == spot.id|string %}selected{% endif %}>
+                    {{ spot.site_name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="warranty_status_filter">保固狀態</label>
+            <select class="form-control" id="warranty_status_filter" name="warranty_status_filter">
+                <option value="">不指定</option>
+                <option value="within" {% if request.args.get('warranty_status_filter') == 'within' %}selected{% endif %}>保固期間內</option>
+                <option value="expired" {% if request.args.get('warranty_status_filter') == 'expired' %}selected{% endif %}>已過保</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="maintenance_status_filter">維護狀態</label>
+            <select class="form-control" id="maintenance_status_filter" name="maintenance_status_filter">
+                <option value="">不指定</option>
+                <option value="within" {% if request.args.get('maintenance_status_filter') == 'within' %}selected{% endif %}>維護期間內</option>
+                <option value="expired" {% if request.args.get('maintenance_status_filter') == 'expired' %}selected{% endif %}>已過維護</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="search">關鍵字</label>
+            <input type="text" class="form-control" id="search" name="search" placeholder="案場 名稱" value="{{ request.args.get('search','') }}">
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.contract_management') }}" class="btn btn-gradient-sm" style="background:#6c757d;">重置</a>
+        </div>
+    </form>
+
+    <!-- 新增合約按鈕 -->
+    <div class="action-bar">
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addContractModal">
+            新增合約
+        </button>
+    </div>
+
+    <!-- 合約記錄表格 -->
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>公司名稱</th>
+                    <th>案場名稱</th>
+                    <th>保固日期</th>
+                    <th>保固金額</th>
+                    <th>維護日期</th>
+                    <th>連結</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% macro render_date_cell(d_start, d_end, prefix="") %}
+                    {% if d_start and d_end %}
+                        {% set date_str = d_start.strftime('%Y/%m/%d') ~ ' ~ ' ~ d_end.strftime('%Y/%m/%d') %}
+                        {% if prefix %}
+                            {% set display_str = prefix ~ " " ~ date_str %}
+                        {% else %}
+                            {% set display_str = date_str %}
+                        {% endif %}
+                        {% if d_end < today %}
+                            <td style="background-color: #ffcccc; white-space: nowrap;">{{ display_str }}</td>
+                        {% elif d_end <= one_month_later %}
+                            <td style="background-color: #ffffcc; white-space: nowrap;">{{ display_str }}</td>
+                        {% else %}
+                            <td style="white-space: nowrap;">{{ display_str }}</td>
+                        {% endif %}
+                    {% else %}
+                        <td style="white-space: nowrap;">N/A</td>
+                    {% endif %}
+                {% endmacro %}
+
+                {% for contract in contracts %}
+                <tr>
+                    <td style="white-space: nowrap;">{{ spot_client_map.get(contract.spot_id, '無對應公司') }}</td>
+                    <td style="white-space: nowrap;">{{ contract.spot.site_name if contract.spot else '無對應案場' }}</td>
+
+                    {{ render_date_cell(contract.warranty_start_date, contract.warranty_end_date, contract.warranty_prefix) }}
+
+                    <td style="white-space: nowrap;">
+                        {% if contract.warranty_amount %}
+                            {{ contract.warranty_amount }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+
+                    {{ render_date_cell(contract.maintenance_start_date, contract.maintenance_end_date, contract.maintenance_prefix) }}
+
+                    <td style="white-space: nowrap;">
+                        {% if contract.link %}
+                            <a href="{{ contract.link }}" target="_blank" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496);">查看連結</a>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td style="white-space: nowrap;">
+                        <a href="{{ url_for('main.edit_contract', contract_id=contract.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+                        <form action="{{ url_for('main.delete_contract', contract_id=contract.id) }}" method="POST" style="display: inline; margin-left:8px;">
+                            {{ form.csrf_token }}
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此合約嗎？');">刪除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center;">暫無合約記錄</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="pagination-wrapper">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for('main.contract_management', page=pagination.page-1, spot_id_filter=request.args.get('spot_id_filter'), warranty_status_filter=request.args.get('warranty_status_filter'), maintenance_status_filter=request.args.get('maintenance_status_filter'), search=request.args.get('search')) }}">上一頁</a>
+        {% else %}
+        <span class="page-link disabled">上一頁</span>
+        {% endif %}
+
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                <a class="page-link {% if page_num == pagination.page %}active{% endif %}" href="{{ url_for('main.contract_management', page=page_num, spot_id_filter=request.args.get('spot_id_filter'), warranty_status_filter=request.args.get('warranty_status_filter'), maintenance_status_filter=request.args.get('maintenance_status_filter'), search=request.args.get('search')) }}">{{ page_num }}</a>
+            {% else %}
+                <span class="page-link disabled">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for('main.contract_management', page=pagination.page+1, spot_id_filter=request.args.get('spot_id_filter'), warranty_status_filter=request.args.get('warranty_status_filter'), maintenance_status_filter=request.args.get('maintenance_status_filter'), search=request.args.get('search')) }}">下一頁</a>
+        {% else %}
+        <span class="page-link disabled">下一頁</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- 新增合約的模態框 -->
+<div class="modal fade" id="addContractModal" tabindex="-1" aria-labelledby="addContractModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('main.add_contract') }}">
+                {{ form.hidden_tag() }}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addContractModalLabel">新增合約</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        {{ form.spot_id.label }}
+                        {{ form.spot_id(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.warranty_start.label }}
+                        {{ form.warranty_start(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.warranty_end.label }}
+                        {{ form.warranty_end(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.warranty_amount.label }}
+                        {{ form.warranty_amount(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.maintenance_start.label }}
+                        {{ form.maintenance_start(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.maintenance_end.label }}
+                        {{ form.maintenance_end(class="form-control") }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.link.label }}
+                        {{ form.link(class="form-control") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                    <button type="submit" class="btn-gradient">送出</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Travel Record</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>編輯出差紀錄</h2>
+        <form action="{{ url_for('main.edit_travel_record', record_id=record.id) }}" method="POST">
+            {{ form.csrf_token }}
+            <div class="form-group">
+                <label for="datetime">日期時間</label>
+                <input type="datetime-local" class="form-control" id="datetime" name="datetime" value="{{ record.datetime }}" required>
+            </div>
+            <div class="form-group">
+                <label for="location">位置</label>
+                <input type="text" class="form-control" id="location" name="location" value="{{ record.location }}" required>
+            </div>
+            <div class="form-group">
+                <label for="description">描述</label>
+                <textarea class="form-control" id="description" name="description" rows="3" required>{{ record.description }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="jira_link">JIRA 連結</label>
+                <input type="url" class="form-control" id="jira_link" name="jira_link" value="{{ record.jira_link }}">
+            </div>
+            <div class="form-group">
+                <label for="performer">執行人</label>
+                <input type="text" class="form-control" id="performer" name="performer" value="{{ record.performer }}" required>
+            </div>
+            <div class="form-group">
+                <label for="operation_log">現場操作/紀錄</label>
+                <textarea class="form-control" id="operation_log" name="operation_log" rows="3">{{ record.operation_log }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">保存變更</button>
+            <a href="{{ url_for('main.travel_records') }}" class="btn btn-secondary">取消</a>
+        </form>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

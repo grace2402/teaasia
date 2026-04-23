@@ -1,0 +1,36 @@
+<!-- app/templates/product/all_products.html -->
+
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan - All Product{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+	{% if catalog_id %}
+    <h2>{{catalogs[catalog_id - 1]}}</h2>
+    {% else %}
+    <h2>All Catalog</h2>
+	{% endif %}
+</div>
+    <div id="product-list" class="row">
+      {% for product in product_list.items %}
+          <div class="col-xs-12 col-sm-6 col-md-6 col-lg-3 product-summary">
+
+              <div class="well">
+                  <h3><a href="{{ url_for('product.show_product', id=product.id ) }}"</a>{{ product.common_name }}</h3>
+                  <a href="{{ url_for('product.show_product', id=product.id ) }}">
+                      <img src ="{{ url_for('static', filename='product/images/'+  product.imgurl) }}" class="img-circle img-responsive center-block"">
+                  </a>
+
+                  <div class="price">Price : ${{ product.price_str() }}</div>
+                  <a class="btn btn-primary" href="{{ url_for('product.show_product', id=product.id ) }}">Details</a>
+              </div>
+
+          </div>
+      {% endfor %}
+    </div>
+    <div class="text-center">
+		{% if product_list.has_prev %}<a href="{{ url_for('product.list_products',id = catalog_id, page=product_list.prev_num) }}">&lt;&lt; Newer posts</a>{% else %}&lt;&lt; Pre Pages{% endif %} | 
+		{% if product_list.has_next %}<a href="{{ url_for('product.list_products',id = catalog_id, page=product_list.next_num) }}">Older posts &gt;&gt;</a>{% else %}Next Pages &gt;&gt;{% endif %}
+	</div>
+{% endblock %}

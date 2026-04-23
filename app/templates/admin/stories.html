@@ -1,0 +1,68 @@
+<!-- app/templates/admin/products.html -->
+
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan - Product{% endblock %}
+
+{% block page_content %}
+<div class="content-section">
+  <div class="outer">
+    <div class="middle">
+      <div class="inner">
+        {% if stories %}
+          <hr class="intro-divider">
+          <div class="center">
+            <table class="table table-striped table-bordered">
+              <thead>
+                <tr>
+				  <th width="5%">ID</th>
+				  <th width="20%">Title</th>
+				  <th width="15%">Imgurl</th>
+				  <th width="10%">Description</th>
+				  <th width="15%">Location</th>
+				  <th width="10%">Author</th>
+		          <th width="10%">Post Date</th>
+			      <th width="5%">Available</th>
+                  <th width="5%"> Edit </th>
+	              <th width="5%"> Delete </th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for story in stories.items %}
+                <tr>
+                  <td> {{ story.id }} </td>
+                  <td> {{ story.title }} </td>
+                  <td> {{ story.imgurl }} </td>
+                  <td> ********** </td>
+                  <td> {{ story.location }} </td>
+                  <td> {{ story.author }} </td>
+                  <td> {{ story.post_datetime }} </td>
+                  <td> {{ story.available}}</td>
+                  <td><a href="{{ url_for('admin.edit_story', id=story.id) }}" class="glyphicon glyphicon-pencil"></a></td>
+                  <td><a href="{{ url_for('admin.delete_story', id=story.id) }}" class="glyphicon glyphicon-remove-sign"></a></td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div style="text-align: center">
+        {% else %}
+          <div style="text-align: center">
+            <h3> No story have been added. </h3>
+            <hr class="intro-divider">
+        {% endif %}
+            <div class="text-center">
+				{% if stories.has_prev %}<a href="{{ url_for('admin.stories', page=stories.prev_num) }}">&lt;&lt; Newer posts</a>{% else %}&lt;&lt; Pre Pages{% endif %} | 
+				{% if stories.has_next %}<a href="{{ url_for('admin.stories', page=stories.next_num) }}">Older posts &gt;&gt;</a>{% else %}Next Pages &gt;&gt;{% endif %}
+			</div>
+          <a href="{{ url_for('admin.add_story') }}" class="btn btn-default btn-lg">
+            <i class="fa fa-plus"></i>
+            Add Story
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base1.html" %}
+
+{% block title %}編輯 RMA 紀錄{% endblock %}
+
+{% block page_content %}
+<div class="container mt-5">
+    <h2>編輯 RMA 紀錄</h2>
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+            <label for="pid_mac">PID/MAC 位址</label>
+            <input type="text" class="form-control" id="pid_mac" name="pid_mac" value="{{ form.pid_mac.data }}" required>
+        </div>
+        <div class="form-group">
+            <label for="note">備註</label>
+            <input type="text" class="form-control" id="note" name="note" value="{{ form.note.data }}">
+        </div>
+        <div class="form-group">
+            <label for="jira_link">JIRA 連結</label>
+            <input type="text" class="form-control" id="jira_link" name="jira_link" value="{{ form.jira_link.data }}">
+        </div>
+        <button type="submit" class="btn btn-primary">更新</button>
+        <a href="{{ url_for('main.rma_records') }}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+{% endblock %}

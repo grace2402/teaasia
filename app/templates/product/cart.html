@@ -1,0 +1,56 @@
+<!-- app/templates/product/cart.html -->
+{% import "bootstrap/utils.html" as utils %}
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan - Cart{% endblock %}
+
+{% block page_content %}
+
+    <div class="page-header">
+    	<a href="{{ url_for("product.clean")}}" class="btn btn-large btn-primary">Clean Cart</a>
+	</div>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th></th>
+            <th>Product Name</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%if cart %}
+        {% for order in cart %}
+        <tr>
+        	<td><a href="{{url_for("product.remove_from_cart",name = order[0]) }}" class="glyphicon glyphicon-trash"></a></td>
+            
+            <td>{{ order[0] }}</td>
+            <td>${{ order[2] }}</td>
+            <td>{{ order[1] }}</td>
+            <td>${{ order[3] }}</td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td>No items in cart.</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+<div class="row">
+        <div class="col-xs-12 col-sm-6 col-md-6 col-lg-4 col-center-block">
+            <div class="well text-center">
+			  
+			  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+			    <article>
+			      <label>
+			        <span>Amount is ${{total}}</span>
+			       <a href="{{url_for("product.charge")}}" class="btn btn-large btn-primary">Add to order</a>
+			      </label>
+			    </article>
+			  
+			</div>
+		</div>
+</div>
+{% endblock %}

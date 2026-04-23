@@ -1,0 +1,44 @@
+{% extends "base1.html" %}
+
+{% block title %}
+維運紀錄歷史版本
+{% endblock %}
+
+{% block page_content %}
+<div class="container mt-5">
+    <h2>維運紀錄歷史版本</h2>
+    <p><strong>當前紀錄:</strong> {{ record.description }}</p>
+
+    <table class="table table-bordered mt-4">
+        <thead>
+            <tr>
+                <th>編輯時間</th>
+                <th>位置</th>
+                <th>描述</th>
+                <th>JIRA 連結</th>
+                <th>執行人</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for history in history_records %}
+            <tr>
+                <td>{{ history.edited_at }}</td>
+                <td>{{ history.location }}</td>
+                <td>{{ history.description }}</td>
+                <td><a href="{{ history.jira_link }}" target="_blank">{{ history.jira_link }}</a></td>
+                <td>{{ history.performer }}</td>
+                <td>
+                    <form action="{{ url_for('main.revert_to_version', history_id=history.id) }}" method="POST" style="display:inline;">
+                        {{ form.csrf_token }}
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要回滾到這個版本嗎？');">回滾</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('main.maintenance_records') }}" class="btn btn-secondary">返回維運紀錄</a>
+</div>
+{% endblock %}

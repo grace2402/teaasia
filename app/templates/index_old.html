@@ -1,0 +1,30 @@
+<!-- app/templates/index.html -->
+
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan{% endblock %}
+
+{% block head %}
+	{{ super() }}
+	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/index_old.css')}}"/>
+{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1 class="shadow">Hello, {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Stranger{% endif %}!</h1>
+</div>
+<div class="container">
+  <div class="row">
+        <a href="/product/products/1" class="btn_product"><img src="{{ url_for('static', filename='img/ubermelon-logo.png')}}""></a>
+        <h1 class="shadow">ByTaiwan</h1>
+        <p class="lead">We'll introduce Taiwan for you.</p>
+	</div>
+  </div>
+<div class="footer">
+	<p></p>
+	<p>Copyright ByTaiwan 2018. All rights reserved.</p>
+	<p>eMail : bytaiwan5812@gmail.com</p>
+</div>
+{% endblock %}

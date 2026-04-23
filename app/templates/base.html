@@ -1,0 +1,445 @@
+<!-- app/templates/base.html -->
+
+{% extends "bootstrap/base.html" %}
+
+{% block title %}ByTaiwan{% endblock %}
+
+{% block head %}
+	{{ super() }}
+	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}"/>
+	<style>
+		:root {
+			--gradient-start: #667eea;
+			--gradient-end: #764ba2;
+			--hover-bg: #f8f9ff;
+			--card-radius: 12px;
+			--btn-radius: 10px;
+		}
+
+		/* 導覽列 - 深色區分 */
+		.navbar-custom {
+			background: #1a1a2e !important;
+			border-bottom: 3px solid #667eea !important;
+			margin-bottom: 0 !important;
+		}
+		.navbar-custom .navbar-brand,
+		.navbar-custom .navbar-nav > li > a {
+			color: #e0e0e0 !important;
+			font-size: 24px !important;
+		}
+		.navbar-custom .navbar-nav > li > a:hover {
+			color: #667eea !important;
+			background: rgba(102, 126, 234, 0.1) !important;
+		}
+		.navbar-custom .navbar-toggle .icon-bar {
+			background-color: #e0e0e0 !important;
+		}
+
+		/* 標題列 */
+		.page-header-bar {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+			color: white;
+			padding: 28px 32px;
+			border-radius: var(--card-radius) var(--card-radius) 0 0;
+			margin-top: 20px;
+			margin-bottom: 0;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+		}
+		.page-header-bar h1,
+		.page-header-bar h2 {
+			color: white !important;
+			font-size: 38.4px !important;
+			margin: 0;
+		}
+
+		/* 卡片式容器 */
+		.card-container {
+			border: 0 !important;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+			border-radius: var(--card-radius) !important;
+			overflow: hidden;
+			margin-bottom: 24px;
+			background: white;
+		}
+
+		/* 卡片主體 */
+		.card-body-custom {
+			padding: 24px;
+		}
+
+		/* 表格樣式 */
+		.custom-table {
+			width: 100% !important;
+			border-collapse: separate !important;
+			border-spacing: 0 !important;
+			border-radius: var(--card-radius) !important;
+			overflow: hidden !important;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+		}
+		.custom-table thead th {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			color: white !important;
+			font-size: 18px !important;
+			padding: 16px 18px !important;
+			border: none !important;
+			white-space: nowrap !important;
+			font-weight: 600 !important;
+		}
+		.custom-table tbody td {
+			font-size: 16px !important;
+			padding: 14px 18px !important;
+			border-bottom: 1px solid #e9ecef !important;
+			vertical-align: middle !important;
+		}
+		.custom-table tbody td .btn-gradient-sm {
+			font-size: 14px !important;
+			padding: 6px 12px !important;
+			line-height: 1.2 !important;
+		}
+		.custom-table tbody td .btn-gradient-sm + .btn-gradient-sm {
+			margin-left: 6px !important;
+		}
+		.custom-table tbody tr:hover {
+			background-color: var(--hover-bg) !important;
+		}
+		.custom-table tbody tr:last-child td {
+			border-bottom: none !important;
+		}
+
+		/* 按鈕樣式 */
+		.btn-gradient {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			color: white !important;
+			border: none !important;
+			border-radius: var(--btn-radius) !important;
+			font-size: 21.6px !important;
+			padding: 10px 24px !important;
+			font-weight: 500 !important;
+			transition: all 0.3s ease !important;
+			text-decoration: none !important;
+			display: inline-block !important;
+		}
+		.btn-gradient:hover {
+			background: var(--hover-bg) !important;
+			color: var(--gradient-end) !important;
+			transform: translateY(-1px) !important;
+			box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+			text-decoration: none !important;
+		}
+		.btn-gradient-sm {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			color: white !important;
+			border: none !important;
+			border-radius: var(--btn-radius) !important;
+			font-size: 21.6px !important;
+			padding: 6px 16px !important;
+			font-weight: 500 !important;
+			transition: all 0.3s ease !important;
+		}
+		.btn-gradient-sm:hover {
+			background: var(--hover-bg) !important;
+			color: var(--gradient-end) !important;
+			transform: translateY(-1px) !important;
+			box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+		}
+
+		/* 篩選表單 */
+		.filter-form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 12px !important;
+			align-items: flex-end !important;
+			padding: 20px 24px !important;
+			background: #eef0f5 !important;
+			border-radius: var(--card-radius) !important;
+			margin-bottom: 16px !important;
+		}
+		.filter-form .filter-group {
+			display: flex !important;
+			flex-direction: column !important;
+			gap: 6px !important;
+		}
+		.filter-form label {
+			font-size: 21.6px !important;
+			font-weight: 500 !important;
+			color: #495057 !important;
+		}
+		.filter-form .form-control {
+			font-size: 24.0px !important;
+			border-radius: 8px !important;
+			border: 2px solid #dee2e6 !important;
+			padding: 14px 16px !important;
+			min-height: 52px !important;
+			line-height: 1.4 !important;
+			transition: border-color 0.3s ease !important;
+		}
+		.filter-form .form-control:focus {
+			border-color: var(--gradient-start) !important;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+		}
+		.filter-form select.form-control {
+			min-height: 52px !important;
+		}
+		.filter-form .btn {
+			min-height: 52px !important;
+			padding: 14px 24px !important;
+			line-height: 1.4 !important;
+		}
+
+		/* 分頁 */
+		.pagination-gradient .page-item .page-link {
+			background: white !important;
+			border: 2px solid #dee2e6 !important;
+			color: var(--gradient-end) !important;
+			font-size: 24.0px !important;
+			border-radius: 8px !important;
+			padding: 10px 18px !important;
+			margin: 0 4px !important;
+			transition: all 0.3s ease !important;
+			text-decoration: none !important;
+		}
+		.pagination-gradient .page-item .page-link:hover {
+			background: var(--hover-bg) !important;
+			border-color: var(--gradient-start) !important;
+			color: var(--gradient-start) !important;
+		}
+		.pagination-gradient .page-item.active .page-link {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			border-color: var(--gradient-end) !important;
+			color: white !important;
+		}
+		.pagination-gradient .page-item.disabled .page-link {
+			background: #f8f9fa !important;
+			border-color: #dee2e6 !important;
+			color: #adb5bd !important;
+		}
+
+		/* Modal 美化 */
+		.modal-content {
+			border: 0 !important;
+			border-radius: var(--card-radius) !important;
+			box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+		}
+		.modal-header {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			color: white !important;
+			border-radius: var(--card-radius) var(--card-radius) 0 0 !important;
+			border: none !important;
+			padding: 20px 24px !important;
+		}
+		.modal-header .modal-title {
+			color: white !important;
+			font-size: 26.4px !important;
+		}
+		.modal-header .close {
+			color: white !important;
+			opacity: 0.8 !important;
+			text-shadow: none !important;
+		}
+		.modal-header .close:hover {
+			opacity: 1 !important;
+		}
+		.modal-body {
+			padding: 24px !important;
+		}
+		.modal-footer {
+			border-top: 1px solid #e9ecef !important;
+			padding: 16px 24px !important;
+		}
+
+		/* 一般表單控制項 */
+		.form-control {
+			font-size: 24.0px !important;
+			border-radius: 8px !important;
+			border: 2px solid #dee2e6 !important;
+			padding: 10px 14px !important;
+		}
+		.form-control:focus {
+			border-color: var(--gradient-start) !important;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+		}
+
+		/* Alert 樣式 */
+		.alert {
+			border-radius: var(--card-radius) !important;
+			font-size: 21.6px !important;
+		}
+		.alert-warning {
+			background-color: #fff3cd !important;
+			border: 2px solid #ffc107 !important;
+			border-radius: var(--card-radius) !important;
+			color: #856404 !important;
+			font-size: 21.6px !important;
+		}
+
+		/* 副標題 */
+		.page-subtitle {
+			font-size: 26.4px !important;
+			color: #6c757d !important;
+			margin-bottom: 20px !important;
+		}
+
+	/* 行動按鈕區塊 */
+	.action-bar {
+		display: flex !important;
+		justify-content: flex-start !important;
+		align-items: center !important;
+		gap: 12px !important;
+		margin-bottom: 16px !important;
+		flex-wrap: wrap !important;
+	}
+
+		/* 表格容器 */
+		.table-responsive-custom {
+			overflow-x: auto !important;
+			border-radius: var(--card-radius) !important;
+		}
+
+		/* 登入/註冊頁面 */
+		.auth-card {
+			border: 0 !important;
+			box-shadow: 0 4px 24px rgba(0,0,0,0.1) !important;
+			border-radius: var(--card-radius) !important;
+			overflow: hidden;
+			background: white;
+		}
+		.auth-card .auth-header {
+			background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+			color: white !important;
+			padding: 32px 24px !important;
+			text-align: center;
+		}
+		.auth-card .auth-header h1 {
+			color: white !important;
+			font-size: 38.4px !important;
+			margin: 0;
+		}
+		.auth-card .auth-body {
+			padding: 32px 24px !important;
+		}
+		.auth-card .form-group label {
+			font-size: 24.0px !important;
+			font-weight: 500 !important;
+		}
+		.auth-card .form-control {
+			font-size: 24.0px !important;
+			border-radius: 8px !important;
+			border: 2px solid #dee2e6 !important;
+			padding: 12px 16px !important;
+		}
+		.auth-card .form-control:focus {
+			border-color: var(--gradient-start) !important;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15) !important;
+		}
+
+		/* 隱藏的合約列 */
+		.contract-row {
+			display: none;
+			background-color: #f8f9ff !important;
+		}
+
+		/* 可編輯欄位 */
+		.editable {
+			cursor: pointer;
+		}
+		.editable:hover {
+			background-color: var(--hover-bg) !important;
+		}
+		.editing {
+			background-color: #f8f9fa !important;
+		}
+
+		/* 通用 GW 列表欄位可換行 */
+		.gw-list-column {
+			white-space: normal !important;
+		}
+	</style>
+{% endblock %}
+
+{% block navbar %}
+<div class="navbar-custom navbar-inverse" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">案場管理系統</a>
+        </div>
+        <div class="navbar-collapse collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="{{ url_for('main.site_management') }}">案場管理</a></li>
+                <li><a href="{{ url_for('main.client_management') }}">客戶管理</a></li>
+                <li><a href="{{ url_for('main.material_management') }}">物料管理</a></li>
+                <li><a href="{{ url_for('main.maintenance_records') }}">維運紀錄</a></li>
+                <li><a href="{{ url_for('main.travel_records') }}">出差紀錄</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if current_user.is_authenticated %}
+                <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                {% else %}
+                <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        {{ message }}
+    </div>
+    {% endfor %}
+
+    {% block page_content %}{% endblock %}
+
+    <div class="row">
+
+    <div class="footer text-center">
+    <p>
+    <p>
+		<div style='border-bottom:1px solid #ccc;'></div>
+		    <p></p>
+			<p></p>
+
+			<SPAN class="text-left" STYLE="float:left">
+			    <p>
+				<li>About ByTaiwan.me</li>
+				<li>How to buy</li>
+				<li>Online help</li>
+				<li>Login</li>
+				<li>Sign up</li>
+			    </p>
+			</SPAN>
+
+			<DIV>
+			<SPAN STYLE="float:right">
+			    <p>
+				  <img src="{{ url_for('static', filename='img/line.jpg') }}" style="width:52px;height:52px;border:0;">
+				  <img src="https://qr-official.line.me/M/EjcvhB4dLG.png" style="width:52px;height:52px;border:0;">
+				  
+				<a target="_blank" href="https://www.facebook.com/bytaiwanme-1094327660723216/">
+				  <img src="{{ url_for('static', filename='img/Facebook-icon-logo.jpg') }}" style="width:52px;height:52px;border:0;">
+				</a>
+			    </p>
+			</SPAN>
+			        
+				<p>Copyright ByTaiwan 2018. All rights reserved.</p>
+				<p>eMail : bytaiwan5812@gmail.com</p>
+			</div>
+	</div> 
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ moment.include_moment() }}
+{% endblock %}

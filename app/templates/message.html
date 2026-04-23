@@ -1,0 +1,95 @@
+<!-- app/templates/index.html -->
+
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan{% endblock %}
+
+{% block head %}
+	{{ super() }}
+	<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    <script type=text/javascript src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script type=text/javascript> var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script> 
+<script type=text/javascript>
+var tid = setTimeout(mycode, 3000);
+function mycode() {
+  // do some stuff...
+  	var url = document.location.origin + "/get/";
+	$.get(url, function(data){
+    var arrayLength = data.length;
+    for (var i = 1; i <= arrayLength; i++)
+    	{
+    		$('#authoranddate' + i).text(data[i-1].author + " / " + data[i-1].post_datetime);
+    		$('#messageResult' + i).text(data[i-1].contain);
+    	}
+    });
+    tid = setTimeout(mycode, 3000); // repeat myself
+}
+function abortTimer() { // to be called when you want to stop the timer
+  clearInterval(tid);
+}
+
+$(function() {
+    $("#submitBtn").click(function() {
+         $.ajax({
+            type: "GET",
+            url: $SCRIPT_ROOT + "/post/",
+            contentType: "application/json; charset=utf-8",
+            data: { messageValue: $("#messageText").val() },
+            
+            success: function(data) {
+	            alert( "Post " + data.value) ;
+	            $("textarea#messageText").val("");
+            }
+        });     
+    });
+  });
+</script>
+
+{% endblock %}
+
+{% block page_content %}
+		
+<div class="page-header">
+    <h2 class="shadow">Hello, {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Stranger{% endif %}!</h2>
+</div>
+
+
+
+<div class="row">
+	<div class="col-xs-8">
+		<div class=" post_description">
+		{% for post in posts%}
+			<strong>
+				<div id="authoranddate{{loop.index}}">{{post.author}}</div>
+			</strong>
+			<div class="well well-sm">
+				<div class="story_description">
+					<div id="messageResult{{loop.index}}">{{post.constain}}</div>
+				</div>
+			</div>
+			<p>
+		{% endfor %}
+		</div>
+	</div>
+	<div class="col-xs-4">
+	<h3>Post message :</h3>
+		<div class="well text-center">
+			<textarea  id='messageText' name='messageText' class="form-control" rows="5"  ></textarea>
+			<label>
+			<button type='button' class="btn btn-large btn-primary" id='submitBtn' name='submitBtn'>Submit</button>
+			</label>
+		</div>
+	</div>
+</div>
+
+<div class="row">
+	<div class="footer text-center">
+	<div style='border-bottom:1px solid #ccc;'></div>
+	    <p></p>
+		<p></p>
+		<p>Copyright ByTaiwan 2018. All rights reserved.</p>
+		<p>eMail : bytaiwan5812@gmail.com</p>
+	</div>
+</div>
+{% endblock %}

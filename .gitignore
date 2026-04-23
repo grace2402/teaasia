@@ -1,0 +1,45 @@
+# Environment
+myenv/
+.env
+instance/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Uploads
+uploads/
+taipower_replies/
+upload_csv
+webhook.py
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Eclipse
+.project
+.pydevproject
+.settings/
+
+# Misc
+default
+testgit
+testgit2
+2.0
+3.0
+3.0.36
+8.0.3
+New_feature.py
+TestCognito
+confluence.py
+confluence_find.py
+create_tables.py
+list_tables.py

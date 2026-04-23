@@ -1,0 +1,170 @@
+{% extends "base1.html" %}
+
+{% block title %}站點詳細資訊{% endblock %}
+
+{% block head %}
+{{ super() }}
+<!-- Leaflet.js -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<style>
+    #map {
+        width: 100%;
+        height: 400px;
+    }
+    #info-panel {
+        position: absolute;
+        top: 50px;
+        right: 0;
+        width: 300px;
+        background: white;
+        padding: 15px;
+        border-left: 1px solid #ccc;
+        display: none;
+        z-index: 1002;
+    }
+    #info-panel h4 {
+        margin-top: 0;
+    }
+    .gw-status {
+        font-weight: bold;
+    }
+    .device-list {
+        margin-left: 20px;
+        padding-left: 10px;
+        border-left: 2px solid #ddd;
+    }
+
+    /* 放大字體 */
+    .big-text {
+        font-size: 1.4em; /* 可依需求自行調整 */
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container mt-5">
+    <h2>{{ spot.site_name }} 的詳細資訊</h2>
+
+    <div class="row">
+        <!-- 套用 big-text class 放大「基本資訊」文字 -->
+        <div class="col-md-6 big-text">
+            <h4>基本資訊</h4>
+            <ul>
+                <li><strong>站點名稱：</strong> {{ spot.site_name }}</li>
+                <li><strong>描述：</strong> {{ spot.description }}</li>
+                <li><strong>經度：</strong> {{ spot.longitude }}</li>
+                <li><strong>緯度：</strong> {{ spot.latitude }}</li>
+                <li><strong>客戶：</strong> {{ client_name }}</li>
+                <li><strong>專案代碼：</strong> {{ spot.project_code }}</li>
+            </ul>
+        </div>
+
+        <div class="col-md-6">
+            <h4>站點位置</h4>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <h4>站點相關設備 (GW)</h4>
+    <ul id="gw-list">
+        {% for gw in gw_list if gw %}
+            <li data-gw="{{ gw }}">
+                <div>{{ gw }} (查詢中...)</div>
+                <ul class="device-list">
+                    <li>Device 查詢中...</li>
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <hr>
+
+    <h4>相關記錄</h4>
+    <p>🚧 維運紀錄：{{ maintenance_count }} 筆</p>
+    <p>🛫 出差紀錄：{{ travel_count }} 筆</p>
+
+    <!-- 快速篩選按鈕 -->
+    <a href="{{ url_for('main.maintenance_records', location_filter=spot.site_name) }}" class="btn btn-primary">
+        查看維運紀錄
+    </a>
+    <a href="{{ url_for('main.travel_records', location_filter=spot.site_name) }}" class="btn btn-info">
+        查看出差紀錄
+    </a>
+</div>
+
+<script>
+    // 初始化 Leaflet 地圖
+    var map = L.map('map').setView([{{ spot.latitude }}, {{ spot.longitude }}], 15);
+
+    // 設定 OpenStreetMap 圖層
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // 新增站點標記
+    var marker = L.marker([{{ spot.latitude }}, {{ spot.longitude }}])
+        .addTo(map)
+        .bindPopup("<b>{{ spot.site_name }}</b><br>{{ spot.description }}")
+        .openPopup();
+
+    // GW & Device 狀態查詢
+    function fetchGWAndDevices(gw) {
+        if (!gw || gw === 'null') return; // 若 gw 為空值則跳過
+        fetch(`/get_gw_status/${gw}`)
+            .then(response => response.json())
+            .then(data => {
+                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
+                if (!listItem) return;
+
+                var gwData = data.data && data.data[0];
+                if (!gwData) return;
+
+                var statusText = gwData.onlineStatus === 1 
+                    ? '<span style="color: green;">● 上線</span>' 
+                    : '<span style="color: red;">● 下線</span>';
+                
+                listItem.querySelector('div').innerHTML = `${gw} ${statusText}`;
+
+                if (!gwData.uuid) return;
+
+                return fetch(`/get_gateway_devices/${gwData.uuid}`)
+                    .then(response => response.json())
+                    .then(deviceData => {
+                        var deviceListElement = listItem.querySelector('.device-list');
+                        deviceListElement.innerHTML = '';
+                        
+                        if (deviceData.data.length > 0) {
+                            deviceData.data.forEach(device => {
+                                let deviceStatus = device.onlineStatus === 1
+                                    ? '<span style="color: green;">● 上線</span>'
+                                    : '<span style="color: red;">● 下線</span>';
+                                let li = document.createElement('li');
+                                li.innerHTML = `${device.name} (${device.model}) ${deviceStatus}`;
+                                deviceListElement.appendChild(li);
+                            });
+                        } else {
+                            deviceListElement.innerHTML = '<li>無 Device 資訊</li>';
+                        }
+                    });
+            })
+            .catch(error => {
+                console.error(`查詢 GW ${gw} 失敗:`, error);
+                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
+                if (listItem) {
+                    listItem.querySelector('div').innerHTML = `${gw} <span style="color: gray;">● 狀態未知</span>`;
+                    listItem.querySelector('.device-list').innerHTML = '<li>查詢失敗</li>';
+                }
+            });
+    }
+
+    // 逐一查詢 GW 狀態
+    document.querySelectorAll('#gw-list li').forEach(item => {
+        var gw = item.getAttribute('data-gw');
+        if (!gw || gw === 'null') return;
+        fetchGWAndDevices(gw);
+    });
+</script>
+{% endblock %}

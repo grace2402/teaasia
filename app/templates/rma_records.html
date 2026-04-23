@@ -1,0 +1,212 @@
+{% extends "base1.html" %}
+
+{% block title %}RMA 紀錄{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>RMA 紀錄</h2>
+    </div>
+
+    <!-- 篩選條件 -->
+    <form method="GET" action="{{ url_for('main.rma_records') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="pid_mac_filter">PID/MAC 位址</label>
+            <input type="text" class="form-control" id="pid_mac_filter" name="pid_mac" value="{{ request.args.get('pid_mac') or '' }}" placeholder="輸入 PID/MAC 位址">
+        </div>
+
+        <div class="filter-group">
+            <label for="status_filter">狀態</label>
+            <select class="form-control" id="status_filter" name="status">
+                <option value="">所有狀態</option>
+                <option value="收到" {% if request.args.get('status') == '收到' %}selected{% endif %}>收到</option>
+                <option value="測試中" {% if request.args.get('status') == '測試中' %}selected{% endif %}>測試中</option>
+                <option value="測試正常已退回" {% if request.args.get('status') == '測試正常已退回' %}selected{% endif %}>測試正常已退回</option>
+                <option value="寄回新GW(請在備註填入PID)" {% if request.args.get('status') == '寄回新GW(請在備註填入PID)' %}selected{% endif %}>寄回新GW(請在備註填入PID)</option>
+            </select>
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.rma_records') }}" class="btn btn-gradient-sm" style="background: #6c757d;">重置</a>
+        </div>
+    </form>
+
+    <!-- 表格上方按鈕區域 -->
+    <div class="action-bar">
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addRecordModal">
+            新增 RMA 紀錄
+        </button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>PID/MAC 位址</th>
+                    <th>狀態</th>
+                    <th>備註</th>
+                    <th>JIRA 連結</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.id }}</td>
+                    <td>{{ record.pid_mac }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('main.update_rma_status', record_id=record.id) }}">
+                            <select name="status" class="form-control" onchange="this.form.submit()">
+                                <option value="收到" {% if record.status == '收到' %}selected{% endif %}>收到</option>
+                                <option value="測試中" {% if record.status == '測試中' %}selected{% endif %}>測試中</option>
+                                <option value="測試正常已退回" {% if record.status == '測試正常已退回' %}selected{% endif %}>測試正常已退回</option>
+                                <option value="寄回新GW(請在備註填入PID)" {% if record.status == '寄回新GW(請在備註填入PID)' %}selected{% endif %}>寄回新GW(請在備註填入PID)</option>
+                            </select>
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        </form>
+                    </td>
+                    <td>{{ record.note }}</td>
+                    <td>
+                        {% if record.jira_link %}
+                        <a href="{{ record.jira_link }}" class="btn-gradient-sm" target="_blank" style="background:linear-gradient(135deg,#17a2b8,#138496);">JIRA 連結</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <!-- 編輯按鈕 -->
+                        <a href="{{ url_for('main.edit_rma_record', record_id=record.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+
+                        <!-- 刪除按鈕 -->
+                        <form method="POST" action="{{ url_for('main.delete_rma_record', record_id=record.id) }}" style="display:inline; margin-left:8px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此 RMA 紀錄嗎？');">刪除</button>
+                        </form>
+
+                        <!-- 複製連結按鈕 (放在刪除按鈕右側) -->
+                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:8px;"
+                            data-link="{{ url_for('main.rma_records', _external=True) }}?pid_mac={{ record.pid_mac|urlencode }}"
+                            class="copy-link-btn">
+                            複製連結
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分頁導航 -->
+    <div class="pagination-wrapper">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for('main.rma_records', page=pagination.prev_num) }}">上一頁</a>
+        {% else %}
+        <span class="page-link disabled">上一頁</span>
+        {% endif %}
+
+        {% for page_num in pagination.iter_pages() %}
+        {% if page_num %}
+        <a class="page-link {% if page_num == pagination.page %}active{% endif %}" href="{{ url_for('main.rma_records', page=page_num) }}">{{ page_num }}</a>
+        {% else %}
+        <span class="page-link disabled">...</span>
+        {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for('main.rma_records', page=pagination.next_num) }}">下一頁</a>
+        {% else %}
+        <span class="page-link disabled">下一頁</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 新增 RMA 紀錄的模態框 -->
+<div class="modal fade" id="addRecordModal" tabindex="-1" aria-labelledby="addRecordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addRecordModalLabel">新增 RMA 紀錄</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('main.add_rma_record') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="pid_mac">PID/MAC 位址</label>
+                        <input type="text" class="form-control" id="pid_mac" name="pid_mac" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">狀態</label>
+                        <select class="form-control" id="status" name="status" required>
+                            <option value="收到">收到</option>
+                            <option value="測試中">測試中</option>
+                            <option value="測試正常已退回">測試正常已退回</option>
+                            <option value="寄回新GW(請在備註填入PID)">寄回新GW(請在備註填入PID)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="note">備註</label>
+                        <input type="text" class="form-control" id="note" name="note">
+                    </div>
+                    <div class="form-group">
+                        <label for="jira_link">JIRA 連結</label>
+                        <input type="text" class="form-control" id="jira_link" name="jira_link">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                    <button type="submit" class="btn-gradient">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 複製連結的 JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.copy-link-btn').forEach(function(button){
+        button.addEventListener('click', function(){
+            var link = button.getAttribute('data-link');
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(link).then(function(){
+                    alert('連結已複製：' + link);
+                }).catch(function(){
+                    alert('複製連結失敗，請手動複製。');
+                });
+            } else {
+                var textArea = document.createElement("textarea");
+                textArea.value = link;
+                textArea.style.position = "fixed";
+                textArea.style.top = "-1000px";
+                textArea.style.left = "-1000px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    var successful = document.execCommand('copy');
+                    if(successful){
+                        alert('連結已複製：' + link);
+                    } else {
+                        alert('複製連結失敗，請手動複製。');
+                    }
+                } catch (err) {
+                    alert('複製連結失敗，請手動複製。');
+                }
+                document.body.removeChild(textArea);
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

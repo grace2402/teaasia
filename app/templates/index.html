@@ -1,0 +1,583 @@
+{% extends "base1.html" %}
+
+{% block title %}案場管理系統{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        .content-container {
+            position: relative;
+            height: 80vh; /* 確保地圖高度固定 */
+        }
+        #map {
+            position: absolute;
+            top: 50px; /* 預留空間給操作區 */
+            left: 0;
+            width: 100%;
+            height: calc(100% - 50px);
+        }
+        #info-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            /* 將原本 25% 改成 35%，並增加 max-width */
+            width: 35%;
+            max-width: 450px;
+            height: 100%;
+            background-color: #f8f9fa;
+            overflow-y: auto;
+            border-left: 1px solid #ddd;
+            display: none;
+            z-index: 1002;
+            padding: 15px;
+            font-size: 19.2px;
+        }
+        #spot-details ul {
+            padding-left: 20px;
+            margin: 0;
+        }
+        #spot-details li {
+            margin-bottom: 5px;
+        }
+        #spot-details h6, #spot-details h5 {
+            font-size: 19.2px;
+            font-weight: bold;
+        }
+        #close-info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            border: none;
+            font-size: 19.2px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1003;
+        }
+        .add-spot-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 50px;
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+        }
+        /* 將客戶篩選下拉選單放在 add-spot-container 內 */
+        #client-filter-select {
+            width: auto;
+        }
+        /* 快速模式彈窗 */
+        .quick-mode-modal {
+            display: none;
+            position: fixed;
+            z-index: 1003;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            background: white;
+            padding: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            text-align: center;
+        }
+        .quick-mode-modal h4 {
+            margin-bottom: 10px;
+        }
+        .quick-mode-modal input {
+            width: 60px;
+            text-align: center;
+        }
+        .quick-mode-modal .modal-buttons {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .quick-mode-modal .spot-count {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        /* 讓按鈕不換行 */
+        .button-container {
+            white-space: nowrap;
+        }
+    </style>
+{% endblock %}
+
+{% block page_content %}
+<div class="content-container">
+    {% if current_user.is_authenticated %}
+    <div class="add-spot-container">
+        <!-- 客戶篩選下拉選單：值為 client id -->
+        <label for="client-filter-select" style="margin-bottom: 0;">篩選客戶:</label>
+        <select id="client-filter-select" class="form-control" style="width:auto;">
+            <option value="">所有客戶</option>
+            {% for c in clients %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+        </select>
+        <a href="{{ url_for('main.add_spot') }}" class="btn btn-primary">新增站點</a>
+        <a href="{{ url_for('main.gw_monitor') }}" class="btn btn-info">監控GW清單</a>
+        <button id="quick-mode-btn" class="btn btn-warning">快速模式</button>
+    </div>
+    {% endif %}
+
+    <div id="map"></div>
+
+    <div id="info-panel">
+        <button id="close-info-panel">&times;</button>
+        <h4>Spot 詳細資訊</h4>
+        <div id="spot-details"></div>
+        {% if current_user.is_authenticated %}
+        <div class="button-container">
+            <button id="edit-button" class="btn btn-warning">編輯站點資訊</button>
+            <button id="detail-button" class="btn btn-info">詳細資訊</button>
+            <button id="delete-button" class="btn btn-danger">刪除站點</button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 快速模式彈窗 -->
+<div id="quick-mode-modal" class="quick-mode-modal">
+    <button id="close-quick-mode-modal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 19.2px; cursor: pointer;">&times;</button>
+    <h4>快速模式設定</h4>
+    <label>更新頻率：</label>
+    <input type="number" id="frequency-input" min="1" value="30"> 分鐘
+    <div class="spot-count">目前畫面內 Spot 數量：<span id="spot-count">0</span></div>
+    <div class="modal-buttons">
+        <button id="start-quick-mode" class="btn btn-success">啟動</button>
+        <button id="stop-quick-mode" class="btn btn-danger" style="display: none;">停止</button>
+    </div>
+</div>
+
+<script>
+    // 從後端取得的 spots（每個 spot 物件應包含 client_id、gw_list 等屬性）
+    var spots = {{ spots | tojson | safe }};
+    // 從後端取得的 clients（包含 id 與 name）
+    var clients = [
+        {% for c in clients %}
+        { id: "{{ c.id }}", name: "{{ c.name }}" },
+        {% endfor %}
+    ];
+
+    // Leaflet 初始化
+    var map = L.map('map').setView([25.042917, 121.515067], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap 貢獻者'
+    }).addTo(map);
+
+    var quickModeActive = false;
+    var updateFrequency = 30;
+    var updateInterval;
+    var markers = [];
+
+    var infoPanel = document.getElementById('info-panel');
+    var spotDetails = document.getElementById('spot-details');
+    var closeInfoPanel = document.getElementById('close-info-panel');
+
+    closeInfoPanel.addEventListener('click', function() {
+        infoPanel.style.display = 'none';
+    });
+
+    // 計算目前地圖範圍內的 Spot 數量，並更新畫面
+    function updateVisibleSpotCount() {
+        var bounds = map.getBounds();
+        // 過濾掉經緯度無效的 Spot
+        var visibleSpots = spots.filter(spot => {
+            if (spot.latitude == null || spot.longitude == null) return false;
+            return bounds.contains([spot.latitude, spot.longitude]);
+        });
+        document.getElementById('spot-count').innerText = visibleSpots.length;
+        return visibleSpots;
+    }
+
+    // ---------- 檢查整個 Spot 的所有 GW/Device 狀態，並根據結果回傳顏色 ----------
+    async function checkSpotStatus(spot) {
+        let anyGwOffline = false;      // 任一 GW 真正離線 (onlineStatus=0)
+        let anyDeviceOffline = false;  // 任一 Device 離線 (onlineStatus=0 or 5)
+        let anyGwError = false;        // 任一 GW 查詢失敗 (HTTP 錯誤、404、拋出異常)
+
+        // 若無 GW → 視需求直接顯示橙色或其他狀態
+        if (!spot.gw_list || spot.gw_list.length === 0) {
+            return 'orange';
+        }
+
+        for (const gw of spot.gw_list) {
+            try {
+                // 1. 查詢 GW 狀態
+                const gwRes = await fetch(`/get_gw_status/${gw}`);
+                if (!gwRes.ok) {
+                    // 404 或其他 HTTP 錯誤
+                    throw new Error(`GW fetch failed: ${gwRes.status}`);
+                }
+                const gwData = await gwRes.json();
+                const gwStatus = gwData.data && gwData.data[0];
+                if (!gwStatus) {
+                    // 無法取得任何 GW 資料 → 視為離線或錯誤
+                    anyGwOffline = true;
+                    continue;
+                }
+
+                // 判斷 GW 上下線
+                if (gwStatus.onlineStatus === 0) {
+                    anyGwOffline = true;
+                } else if (gwStatus.onlineStatus === 1) {
+                    // GW 上線 → 檢查 Device
+                    if (!gwStatus.uuid) {
+                        // 無 UUID → 無法查 Device
+                        anyGwError = true;
+                        continue;
+                    }
+                    const devRes = await fetch(`/get_gateway_devices/${gwStatus.uuid}`);
+                    if (!devRes.ok) {
+                        // 若 Device 查詢失敗
+                        throw new Error(`Device fetch failed: ${devRes.status}`);
+                    }
+                    const devData = await devRes.json();
+                    if (devData.data && devData.data.length > 0) {
+                        for (const device of devData.data) {
+                            if (device.onlineStatus === 0 || device.onlineStatus === 5) {
+                                anyDeviceOffline = true;
+                            }
+                        }
+                    }
+                } else {
+                    // GW 狀態未知(非0/1)，可視為離線
+                    anyGwOffline = true;
+                }
+            } catch (err) {
+                console.error(`Error fetching GW/Device status for GW=${gw}`, err);
+                // 只要有錯誤 → 顯示橙色
+                anyGwError = true;
+            }
+        }
+
+        // 最終決定顏色
+        // 1) anyGwError → 橙色
+        // 2) anyGwOffline → 紅色
+        // 3) anyDeviceOffline → 黃色
+        // 4) 以上皆否 → 藍色
+        if (anyGwError) {
+            return 'orange';
+        } else if (anyGwOffline) {
+            return 'red';
+        } else if (anyDeviceOffline) {
+            return 'yellow';
+        } else {
+            return 'blue';
+        }
+    }
+
+    // ---------- 快速模式：定時更新所有 GW/Device 狀態 ----------
+    async function updateGwStatus() {
+        const visibleSpots = updateVisibleSpotCount();
+
+        for (const spot of visibleSpots) {
+            const marker = markers.find(m => m.spot.id === spot.id);
+            if (!marker) continue;
+
+            try {
+                const color = await checkSpotStatus(spot);
+                let iconUrl = '';
+                switch (color) {
+                    case 'red':
+                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
+                        break;
+                    case 'orange':
+                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
+                        break;
+                    case 'yellow':
+                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
+                        break;
+                    default: // 'blue'
+                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+                }
+                marker.setIcon(L.icon({ iconUrl, iconSize: [32, 32] }));
+            } catch (err) {
+                console.error('updateGwStatus error:', err);
+                // 若意外錯誤 → 橙色
+                marker.setIcon(L.icon({
+                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
+                    iconSize: [32, 32]
+                }));
+            }
+        }
+    }
+
+    // ---------- 顯示地圖 Marker ----------
+    function displayMarkers(filteredSpots) {
+        // 過濾掉經緯度無效的資料
+        filteredSpots = filteredSpots.filter(spot => spot.latitude != null && spot.longitude != null);
+
+        // 先清除舊的 Marker
+        markers.forEach(function(marker) {
+            map.removeLayer(marker);
+        });
+        markers = [];
+
+        filteredSpots.forEach(function(spot) {
+            var marker = L.marker([spot.latitude, spot.longitude]).addTo(map);
+            marker.spot = spot;
+
+            // 點擊 Marker → 顯示 infoPanel
+            marker.on('click', function() {
+                infoPanel.style.display = 'block';
+                infoPanel.spotId = spot.id;
+
+                // 建立 Spot 基本資訊 + GW 列表 (初始顯示查詢中)
+                spotDetails.innerHTML = `
+                    <h5>${spot.site_name}</h5>
+                    <p><strong>描述：</strong>${spot.description}</p>
+                    <p><strong>緯度：</strong>${spot.latitude}</p>
+                    <p><strong>經度：</strong>${spot.longitude}</p>
+                    <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
+                    <h6>GW 列表</h6>
+                    <ul id="gw-list">
+                        ${
+                            (spot.gw_list || []).map(gw => `
+                                <li data-gw="${gw}">
+                                    <div>${gw} (查詢中...)</div>
+                                    <ul class="device-list" style="margin-left: 20px;">
+                                        <li>Device 查詢中...</li>
+                                    </ul>
+                                </li>
+                            `).join('')
+                        }
+                    </ul>
+                `;
+
+                {% if current_user.is_authenticated %}
+                // 設置按鈕的 spot id
+                document.getElementById('edit-button').setAttribute('data-spot-id', spot.id);
+                document.getElementById('detail-button').setAttribute('data-spot-id', spot.id);
+                document.getElementById('delete-button').setAttribute('data-spot-id', spot.id);
+                {% endif %}
+
+                // 逐一查詢每個 GW 狀態與 Device (詳細資訊面板)
+                (spot.gw_list || []).forEach(function(gw) {
+                    fetchGWAndDevices(gw);
+                });
+            });
+
+            markers.push(marker);
+        });
+    }
+
+    // ---------- 查詢單一 GW 狀態後，再查 Device 清單 (詳細資訊面板用) ----------
+    function fetchGWAndDevices(gw) {
+        // 1. 先查 GW 狀態
+        fetch(`/get_gw_status/${gw}`)
+            .then(response => {
+                if (!response.ok) throw new Error('GW fetch failed');
+                return response.json();
+            })
+            .then(data => {
+                // 2. 更新該 GW 狀態 (上線/下線/未知)
+                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
+                if (!listItem) throw new Error('Cannot find listItem for GW=' + gw);
+
+                var gwData = data.data && data.data[0];
+                if (!gwData) throw new Error('No GW data');
+
+                let statusText = '';
+                if (gwData.onlineStatus === 1) {
+                    statusText = '<span style="color: green;">● 上線</span>';
+                } else if (gwData.onlineStatus === 0) {
+                    statusText = '<span style="color: red;">● 下線</span>';
+                } else {
+                    statusText = '<span style="color: gray;">● 狀態未知</span>';
+                }
+                // 更新顯示「GW + 狀態」
+                listItem.querySelector('div').innerHTML = `${gw} ${statusText}`;
+
+                // 檢查是否有 uuid
+                if (!gwData.uuid) {
+                    let deviceListElement = listItem.querySelector('.device-list');
+                    if (deviceListElement) {
+                        deviceListElement.innerHTML = '<li>無法查詢 Device（無 UUID）</li>';
+                    }
+                    return Promise.reject(new Error('No gateway UUID'));
+                }
+                return gwData.uuid;
+            })
+            .then(gatewayUuid => {
+                return fetch(`/get_gateway_devices/${gatewayUuid}`)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Device fetch failed');
+                        return response.json();
+                    });
+            })
+            .then(deviceData => {
+                if (!deviceData) return;
+                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
+                if (!listItem) return;
+                var deviceListElement = listItem.querySelector('.device-list');
+                if (!deviceListElement) return;
+
+                deviceListElement.innerHTML = ''; // 清除「Device 查詢中...」
+
+                if (deviceData.data && deviceData.data.length > 0) {
+                    deviceData.data.forEach(device => {
+                        let deviceStatus = '';
+                        if (device.onlineStatus === 1) {
+                            deviceStatus = '<span style="color: green;">● 上線</span>';
+                        } else if (device.onlineStatus === 0) {
+                            deviceStatus = '<span style="color: red;">● 下線</span>';
+                        } else {
+                            deviceStatus = '<span style="color: gray;">● 狀態未知</span>';
+                        }
+                        let li = document.createElement('li');
+                        li.innerHTML = `${device.name} (${device.model}) ${deviceStatus}`;
+                        deviceListElement.appendChild(li);
+                    });
+                } else {
+                    deviceListElement.innerHTML = '<li>無 Device 資訊</li>';
+                }
+            })
+            .catch(error => {
+                console.error('Error in GW/Device fetch:', error);
+                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
+                if (!listItem) return;
+                var deviceListElement = listItem.querySelector('.device-list');
+                if (!deviceListElement) return;
+                if (
+                    error.message.includes('GW fetch failed') ||
+                    error.message.includes('No GW data') ||
+                    error.message.includes('Cannot find listItem') ||
+                    error.message.includes('No gateway UUID')
+                ) {
+                    listItem.querySelector('div').innerHTML = `${gw} <span style="color: gray;">● 狀態未知</span>`;
+                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
+                } else if (error.message.includes('Device fetch failed')) {
+                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
+                } else {
+                    listItem.querySelector('div').innerHTML = `${gw} <span style="color: gray;">● 狀態未知</span>`;
+                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
+                }
+            });
+    }
+
+    // ---------- 初始化：一開始顯示全部 spots ----------
+    displayMarkers(spots);
+
+    // 地圖移動結束後，更新可視範圍內的 spot 數量
+    map.on('moveend', updateVisibleSpotCount);
+
+    // 客戶篩選功能：根據下拉選單進行前端過濾
+    document.getElementById('client-filter-select').addEventListener('change', function() {
+        var selectedClientId = this.value;
+        var filteredSpots = spots.filter(function(spot) {
+            if (!selectedClientId) return true;
+            return String(spot.client_id) === selectedClientId;
+        });
+        displayMarkers(filteredSpots);
+    });
+
+    // ---------- 快速模式控制 ----------
+    document.getElementById('quick-mode-btn').addEventListener('click', function() {
+        document.getElementById('quick-mode-modal').style.display = 'block';
+        updateVisibleSpotCount();
+    });
+    document.getElementById('close-quick-mode-modal').addEventListener('click', function() {
+        document.getElementById('quick-mode-modal').style.display = 'none';
+    });
+    document.getElementById('start-quick-mode').addEventListener('click', function() {
+        quickModeActive = true;
+        updateFrequency = parseInt(document.getElementById('frequency-input').value, 10);
+        document.getElementById('start-quick-mode').style.display = 'none';
+        document.getElementById('stop-quick-mode').style.display = 'inline-block';
+
+        updateInterval = setInterval(function() {
+            updateGwStatus();
+        }, updateFrequency * 60000);
+
+        document.getElementById('quick-mode-modal').style.display = 'none';
+    });
+    document.getElementById('stop-quick-mode').addEventListener('click', function() {
+        quickModeActive = false;
+        document.getElementById('start-quick-mode').style.display = 'inline-block';
+        document.getElementById('stop-quick-mode').style.display = 'none';
+        clearInterval(updateInterval);
+    });
+
+    // 根據 URL query parameter 中的 client_id 自動篩選與定位
+    function getQueryParam(param) {
+        var params = new URLSearchParams(window.location.search);
+        return params.get(param);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var clientId = getQueryParam('client_id');
+        if (clientId) {
+            document.getElementById('client-filter-select').value = clientId;
+            var filteredSpots = spots.filter(function(spot) {
+                return String(spot.client_id) === clientId;
+            });
+            displayMarkers(filteredSpots);
+            // 如果該客戶只有一個 spot，則設定地圖中心；若超過一個，則調整邊界使所有點可見
+            if (filteredSpots.length === 1) {
+                map.setView([filteredSpots[0].latitude, filteredSpots[0].longitude], 15);
+            } else if (filteredSpots.length > 1) {
+                var latlngs = filteredSpots.map(function(spot) {
+                    return [spot.latitude, spot.longitude];
+                });
+                map.fitBounds(latlngs, {padding: [50, 50]});
+            }
+        }
+
+        // 編輯按鈕事件：導向編輯頁面
+        document.getElementById('edit-button').addEventListener('click', function() {
+            var spotId = this.getAttribute('data-spot-id');
+            if (spotId) {
+                window.location.href = `/edit_spot/${spotId}`;
+            }
+        });
+
+        // 「詳細資訊」按鈕事件：導向 /site_detail/<spot_id>
+        document.getElementById('detail-button').addEventListener('click', function() {
+            var spotId = this.getAttribute('data-spot-id');
+            if (spotId) {
+                window.location.href = `/site_detail/${spotId}`;
+            }
+        });
+
+        // 刪除按鈕事件：發送 POST 請求刪除站點
+        document.getElementById('delete-button').addEventListener('click', function() {
+            var spotId = this.getAttribute('data-spot-id');
+            if (spotId && confirm('您確定要刪除此站點嗎？')) {
+                fetch(`/delete_spot/${spotId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('站點已成功刪除');
+                        location.reload();
+                    } else {
+                        alert('刪除失敗：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('刪除錯誤:', error);
+                    alert('刪除失敗，請稍後再試');
+                });
+            }
+        });
+    });
+</script>
+
+{% endblock %}
