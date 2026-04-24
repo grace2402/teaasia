@@ -444,6 +444,7 @@
             <div class="d-flex" style="flex-grow: 1; justify-content: center;">
                 <ul class="nav navbar-nav" style="margin-left: auto; margin-right: auto; gap: 15px;">
                     <li><a href="{{ url_for('main.site_management') }}" class="{% if request.endpoint == 'main.site_management' %}active{% endif %}">案場管理</a></li>
+                    <li><a href="{{ url_for('main.multi_site_monitoring') }}" class="{% if request.endpoint == 'main.multi_site_monitoring' %}active{% endif %}">多案場監控</a></li>
                     <li><a href="{{ url_for('main.platforms') }}" class="{% if request.endpoint == 'main.platforms' %}active{% endif %}">站台列表</a></li>
                     <li><a href="{{ url_for('main.client_management') }}" class="{% if request.endpoint == 'main.client_management' %}active{% endif %}">客戶管理</a></li>
                     <li><a href="{{ url_for('main.material_management') }}" class="{% if request.endpoint == 'main.material_management' %}active{% endif %}">物料管理</a></li>
@@ -459,8 +460,6 @@
                     <li><a href="{{ url_for('main.search_taipower_records') }}" class="{% if request.endpoint == 'main.search_taipower_records' %}active{% endif %}">電表查詢</a></li>
                     <!-- 新增confluencepage導覽 -->
                     <li> <a href="{{ url_for('main.confluence_overview') }}" class="{% if request.endpoint=='main.confluence_overview' %}active{% endif %}">專案管理</a></li>
-                </ul>
-            </div>
             <ul class="nav navbar-nav navbar-right" style="margin: 0; padding: 0;">
                 {% if current_user.is_authenticated %}
                 <li><a href="{{ url_for('auth.logout') }}" class="logout-btn">登出</a></li>

@@ -1,0 +1,505 @@
+{% extends "base1.html" %}
+
+{% block title %}BESS 多場域監控{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        /* ===== 深色主題 ===== */
+        body.monitoring-body {
+            background: #0f1923 !important;
+            color: #e0e6ed;
+        }
+
+        .monitoring-header {
+            background: linear-gradient(135deg, #1a2a3a, #0f1923);
+            padding: 20px 32px;
+            border-bottom: 2px solid #2a4a6a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .monitoring-header h2 {
+            margin: 0;
+            font-size: 28px;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .monitoring-header .subtitle {
+            font-size: 14px;
+            color: #8899aa;
+            margin-top: 4px;
+        }
+
+        .connection-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: #1a2a3a;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid #2a4a6a;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #4ade80;
+        }
+
+        .connection-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 8px #4ade80;
+        }
+
+        .connection-dot.disconnected {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+
+        .connection-field {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .connection-field label {
+            color: #8899aa;
+            font-size: 13px;
+        }
+
+        .connection-field input {
+            background: #0f1923;
+            border: 1px solid #2a4a6a;
+            color: #e0e6ed;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 140px;
+        }
+
+        .btn-disconnect {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* ===== 監控卡片 ===== */
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 20px;
+            padding: 24px 32px;
+        }
+
+        .monitor-card {
+            background: #1a2a3a;
+            border-radius: 12px;
+            border: 1px solid #2a4a6a;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .monitor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 212, 255, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #1e3a5f, #1a2a3a);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a4a6a;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .card-id {
+            font-size: 12px;
+            color: #667788;
+            font-family: monospace;
+        }
+
+        .card-timestamp {
+            font-size: 13px;
+            color: #8899aa;
+        }
+
+        /* SOC 條 */
+        .soc-section {
+            padding: 16px 20px;
+            background: #0f1923;
+        }
+
+        .soc-bar-container {
+            background: #2a3a4a;
+            height: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .soc-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #4ade80);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .soc-bar.low {
+            background: linear-gradient(90deg, #ef4444, #f59e0b);
+        }
+
+        .soc-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* 指標網格 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px 20px;
+        }
+
+        .metric-item {
+            background: #0f1923;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #2a4a6a;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #8899aa;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-value.purple { color: #a855f7; }
+        .metric-value.yellow { color: #fbbf24; }
+        .metric-value.red { color: #ef4444; }
+        .metric-value.blue { color: #3b82f6; }
+        .metric-value.cyan { color: #06b6d4; }
+        .metric-value.green { color: #4ade80; }
+
+        /* Delta V */
+        .delta-v-section {
+            padding: 8px 20px;
+            background: #0f1923;
+            border-top: 1px solid #2a4a6a;
+            font-size: 14px;
+            color: #e0e6ed;
+        }
+
+        /* 功率區 */
+        .power-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 16px 20px;
+            background: #0f1923;
+            border-top: 1px solid #2a4a6a;
+        }
+
+        .power-item {
+            background: #1a2a3a;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .power-label {
+            font-size: 12px;
+            color: #8899aa;
+            margin-bottom: 4px;
+        }
+
+        .power-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .power-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .power-tag.charging {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .power-tag.discharging {
+            background: #4ade80;
+            color: #0f1923;
+        }
+
+        .power-tag.idle {
+            background: #6b7280;
+            color: white;
+        }
+
+        /* 預測區 */
+        .prediction-section {
+            padding: 12px 20px;
+            background: #0f1923;
+            border-top: 1px solid #2a4a6a;
+        }
+
+        .prediction-title {
+            font-size: 13px;
+            color: #8899aa;
+            margin-bottom: 8px;
+        }
+
+        .prediction-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prediction-item {
+            text-align: center;
+        }
+
+        .prediction-item .label {
+            font-size: 11px;
+            color: #667788;
+        }
+
+        .prediction-item .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e0e6ed;
+        }
+
+        /* 篩選列 */
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            padding: 16px 32px;
+            background: #1a2a3a;
+            border-bottom: 1px solid #2a4a6a;
+            align-items: flex-end;
+        }
+
+        .filter-row .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-row label {
+            font-size: 12px;
+            color: #8899aa;
+        }
+
+        .filter-row input,
+        .filter-row select {
+            background: #0f1923;
+            border: 1px solid #2a4a6a;
+            color: #e0e6ed;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .filter-row .btn-gradient {
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+    </style>
+{% endblock %}
+
+{% block page_content %}
+<div class="monitoring-body">
+    <!-- 頂部標題列 -->
+    <div class="monitoring-header">
+        <div>
+            <h2>
+                <span style="font-size: 32px;">⚡</span>
+                BESS 多場域監控
+            </h2>
+            <div class="subtitle">即時儲能系統數據</div>
+        </div>
+
+        <div class="connection-bar">
+            <div class="connection-status">
+                <div class="connection-dot" id="connection-dot"></div>
+                <span id="connection-text">已連線</span>
+            </div>
+            <div class="connection-field">
+                <label>Host:</label>
+                <input type="text" id="mqtt-host" value="119.31.178.22" readonly>
+            </div>
+            <div class="connection-field">
+                <label>Port:</label>
+                <input type="text" id="mqtt-port" value="8083" readonly>
+            </div>
+            <div class="connection-field">
+                <label>Topic:</label>
+                <input type="text" id="mqtt-topic" value="ND_ScMaintenance" readonly>
+            </div>
+            <button class="btn-disconnect" id="btn-disconnect">斷線</button>
+        </div>
+    </div>
+
+    <!-- 監控卡片網格 -->
+    <div class="monitoring-grid" id="monitor-grid">
+        {% for item in items %}
+        <div class="monitor-card" data-id="{{ item.id }}">
+            <!-- 卡片標題 -->
+            <div class="card-header">
+                <div>
+                    <div class="card-title">{{ item.name }}</div>
+                    <div class="card-id">{{ item.site_id }}</div>
+                </div>
+                <div class="card-timestamp">{{ item.updated_at }}</div>
+            </div>
+
+            <!-- SOC 條 -->
+            <div class="soc-section">
+                <div class="soc-bar-container">
+                    <div class="soc-bar {% if item.soc < 20 %}low{% endif %}" style="width: {{ item.soc }}%">
+                    </div>
+                    <div class="soc-text">SOC {{ "%.1f"|format(item.soc) }}%</div>
+                </div>
+            </div>
+
+            <!-- 指標網格 -->
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">SOH</div>
+                    <div class="metric-value purple">{{ "%.1f"|format(item.soh) }}%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">溫度</div>
+                    <div class="metric-value yellow">{{ "%.1f"|format(item.temperature) }}°C</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Cell 最高</div>
+                    <div class="metric-value red">{{ "%.4f"|format(item.cell_max) }}V</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Cell 最低</div>
+                    <div class="metric-value blue">{{ "%.4f"|format(item.cell_min) }}V</div>
+                </div>
+            </div>
+
+            <!-- Delta V -->
+            <div class="delta-v-section">
+                ΔV = {{ "%.3f"|format(item.delta_v) }} V
+            </div>
+
+            <!-- 功率區 -->
+            <div class="power-section">
+                <div class="power-item">
+                    <div class="power-label">即時功率</div>
+                    <div class="power-value {% if item.power > 0 %}cyan{% else %}green{% endif %}">
+                        {{ "%.1f"|format(item.power) }} kW
+                    </div>
+                    {% if item.power > 0 %}
+                    <span class="power-tag charging">充電</span>
+                    {% elif item.power < 0 %}
+                    <span class="power-tag discharging">放電</span>
+                    {% else %}
+                    <span class="power-tag idle">待機</span>
+                    {% endif %}
+                </div>
+                <div class="power-item">
+                    <div class="power-label">EMS 設定</div>
+                    <div class="power-value" style="color: #6b7280;">
+                        {{ "%.1f"|format(item.ems_setting) }} kW
+                    </div>
+                </div>
+            </div>
+
+            <!-- 預測區 -->
+            <div class="prediction-section">
+                <div class="prediction-title">15 分鐘預測需量 vs 契約</div>
+                <div class="prediction-row">
+                    <div class="prediction-item">
+                        <div class="label">需量</div>
+                        <div class="value">{{ "%.1f"|format(item.predicted_demand) }} kW</div>
+                    </div>
+                    <div class="prediction-item">
+                        <div class="label">契約</div>
+                        <div class="value">{{ "%.1f"|format(item.contract_capacity) }} kW</div>
+                    </div>
+                    <div class="prediction-item">
+                        <div class="label">使用率</div>
+                        <div class="value">{{ "%.1f"|format(item.usage_rate) }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- 如果沒有資料，顯示空狀態 -->
+        {% if not items %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: #667788;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📡</div>
+            <div style="font-size: 18px;">等待 MQTT 資料...</div>
+            <div style="font-size: 14px; margin-top: 8px; color: #445566;">
+                Host: 119.31.178.22:8083 | Topic: ND_ScMaintenance
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MQTT WebSocket 連線 (未來實作) -->
+<script>
+// TODO: 未來接入 MQTT over WebSocket
+// const ws = new WebSocket('ws://119.31.178.22:8083');
+// ws.onmessage = function(event) {
+//     const data = JSON.parse(event.data);
+//     updateDashboard(data);
+// };
+
+// 模擬資料更新 (測試用)
+function updateDashboard(data) {
+    // 根據 data 更新對應的卡片
+    console.log('Received MQTT data:', data);
+}
+</script>
+{% endblock %}

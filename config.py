@@ -28,7 +28,9 @@ class Config:
     UPLOADPATH = os.environ.get('UPLOADPATH') or '/app/uploads/'
     UPLOADED_IMAGES_DEST = os.environ.get('UPLOADED_IMAGES_DEST') or '/app/static/images/'
 
-    ND_TOKEN = 'hemstw-i-am-hemstw'
+    ND_TOKEN='hemstw...mstw'
+
+    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379'
 
     @staticmethod
     def init_app(app):

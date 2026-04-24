@@ -12,6 +12,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_reuploads import UploadSet, IMAGES
 from flask_wtf.csrf import CSRFProtect
 from flask_migrate import Migrate
+from flask_sse import sse
 from flask_apscheduler import APScheduler
 from pytz import timezone
 from email.header import decode_header
@@ -361,6 +362,12 @@ def create_app(config_name):
     from .taipower import taipower_bp
     app.register_blueprint(taipower_bp, url_prefix='/taipowermeters')
     app.extensions["confluence"] = confluence
+    
+    # SSE blueprint
+    app.register_blueprint(sse, url_prefix='/sse')
+    # Notify SSE blueprint
+    from .notifysse import notifysse as notifysse_bp
+    app.register_blueprint(notifysse_bp)
     
     # 啟動排程
     if not app.config.get('IS_MIGRATION', False) and os.environ.get('IS_MIGRATION', 'false').lower() != 'true':

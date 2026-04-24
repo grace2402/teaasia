@@ -314,6 +314,27 @@ def site_management(spot_id):
             cs = Contract.query.filter_by(spot_id=s.id).all()
             spot_contract_map[s.id] = cs
         
+        # 場域監控資料 (TODO: 替換為 MQTT 資料來源)
+        class MockItem:
+            def __init__(self, name, soc, soh, temperature, cell_max, cell_min, power, ems_setting, updated_at, delta_v=0.450, predicted_demand=180.0, contract_capacity=200.0, usage_rate=90.0):
+                self.name = name
+                self.soc = soc
+                self.soh = soh
+                self.temperature = temperature
+                self.cell_max = cell_max
+                self.cell_min = cell_min
+                self.power = power
+                self.ems_setting = ems_setting
+                self.updated_at = updated_at
+                self.delta_v = delta_v
+                self.predicted_demand = predicted_demand
+                self.contract_capacity = contract_capacity
+                self.usage_rate = usage_rate
+        
+        # 把監控資料綁到每個 spot 上
+        for spot in spots:
+            spot.monitoring = MockItem(spot.site_name, 85.5, 98.2, 32.1, 3.65, 3.20, 150.5, 200.0, '2026-04-23 17:30:00')
+
         return render_template('site_management.html',
                                spot=spot,
                                spots=spots,
@@ -348,8 +369,31 @@ def site_management(spot_id):
             cs = Contract.query.filter_by(spot_id=s.id).all()
             spot_contract_map[s.id] = cs
         
+        # 場域監控資料 (TODO: 替換為 MQTT 資料來源)
+        class MockItem:
+            def __init__(self, name, soc, soh, temperature, cell_max, cell_min, power, ems_setting, updated_at, delta_v=0.450, predicted_demand=180.0, contract_capacity=200.0, usage_rate=90.0):
+                self.name = name
+                self.soc = soc
+                self.soh = soh
+                self.temperature = temperature
+                self.cell_max = cell_max
+                self.cell_min = cell_min
+                self.power = power
+                self.ems_setting = ems_setting
+                self.updated_at = updated_at
+                self.delta_v = delta_v
+                self.predicted_demand = predicted_demand
+                self.contract_capacity = contract_capacity
+                self.usage_rate = usage_rate
+
+        monitoring_items = [
+            MockItem(spot.site_name, 85.5, 98.2, 32.1, 3.65, 3.20, 150.5, 200.0, '2026-04-23 17:30:00')
+            for spot in spots
+        ]
+
         return render_template('site_management.html',
                                spots=spots,
+                               monitoring_items=monitoring_items,
                                delete_form=delete_form,
                                pagination=pagination,
                                spot_contract_map=spot_contract_map,
@@ -357,6 +401,49 @@ def site_management(spot_id):
                                project_code_filter=project_code_filter,
                                client_id=client_id,
                                all_clients=all_clients)
+
+# ========== Multi Site Monitoring ==========
+@main.route('/multi_site_monitoring')
+@login_required
+def multi_site_monitoring():
+    # 從 Spot 讀取所有案場，每筆用 MockItem 產生模擬監控資料
+    spots = Spot.query.all()
+
+    class MockItem:
+        def __init__(self, id_val, name, soc, soh, temperature, cell_max, cell_min, power, ems_setting, updated_at, delta_v=0.450, predicted_demand=0.0, contract_capacity=200.0, usage_rate=75.0):
+            self.id = f'camp-{id_val}'
+            self.name = name
+            self.soc = soc
+            self.soh = soh
+            self.temperature = temperature
+            self.cell_max = cell_max
+            self.cell_min = cell_min
+            self.power = power
+            self.ems_setting = ems_setting
+            self.updated_at = updated_at
+            self.delta_v = delta_v
+            self.site_id = f'{id_val:04d}'
+            self.predicted_demand = predicted_demand
+            self.contract_capacity = contract_capacity
+            self.usage_rate = usage_rate
+
+    monitoring_items = [
+        MockItem(
+            spot.id,
+            spot.site_name or f'案場 {spot.id}',
+            85.0 + (spot.id * 3) % 10,          # SOC: 85-94%
+            97.0 + (spot.id * 2) % 2,             # SOH: 97-98%
+            31.0 + (spot.id * 4) % 3,             # Temp: 31-33°C
+            round(3.62 + (spot.id * 0.02), 3),    # Cell max voltage
+            round(3.18 - (spot.id * 0.01), 3),    # Cell min voltage
+            -(145.0 + (spot.id * 5) % 30),        # Power: negative = discharging
+            200.0,                                  # EMS setting
+            '2026-04-24 {:02d}:{:02d}:00'.format(14 - spot.id, min(spot.id * 15, 59)),
+        )
+        for spot in spots
+    ]
+
+    return render_template('monitoring_system.html', items=monitoring_items)
 
 # ========== Material Management (TW) ==========
 @main.route('/material_management')
@@ -388,6 +475,8 @@ def material_management():
         client_id_filter=cid,
         clients=Client.query.all()
     )
+
+
 
 # ========== Maintenance Records ==========
 @main.route('/maintenance_records')
