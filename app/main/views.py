@@ -858,10 +858,12 @@ def delete_spot(spot_id):
         sp = Spot.query.get_or_404(spot_id)
         db.session.delete(sp)
         db.session.commit()
-        return jsonify(success=True)
+        flash('站點已成功刪除')
+        return redirect(url_for('main.site_management'))
     except Exception as e:
         db.session.rollback()
-        return jsonify(success=False, error=str(e)),400
+        flash(f'刪除失敗：{str(e)}', 'danger')
+        return redirect(url_for('main.site_management'))
 
 # ========== RMA Records ==========
 @main.route('/rma_records')

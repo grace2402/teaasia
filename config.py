@@ -39,23 +39,23 @@ class Config:
 
 class DevelopmentConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'postgresql://postgres:zuxfbolahnkagwwl@localhost:5433/teaasia'
+        'postgresql://teaasia:teaasia@teaasia-db:5432/teaasia'
 
 
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
-        'postgresql://postgres:zuxfbolahnkagwwl@localhost:5433/teaasia_test'
+        'postgresql://teaasia:teaasia@localhost:5432/teaasia_test'
 
 
 class ProductionConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:zuxfbolahnkagwwl@localhost:5433/teaasia'
+        'postgresql://teaasia:teaasia@teaasia-db:5432/teaasia'
 
 
 class StagingConfig(Config):
     SQLALCHEMY_DATABASE_URI = os.environ.get('STAGING_DATABASE_URL') or \
-        'postgresql://postgres:zuxfbolahnkagwwl@localhost:5433/teaasia_staging'
+        'postgresql://teaasia:teaasia@localhost:5432/teaasia_staging'
 
 
 config = {
