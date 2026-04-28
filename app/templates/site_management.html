@@ -237,8 +237,9 @@
                     <td>{{ spot.project_code }}</td>
                     <td>
                         <a href="{{ url_for('main.edit_spot', spot_id=spot.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯站點</a>
-                        <form class="delete-spot-form" data-spot-id="{{ spot.id }}" style="display:inline; margin-left:8px;">
-                            <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);">刪除</button>
+                        <form class="delete-spot-form" data-spot-id="{{ spot.id }}" method="POST" style="display:inline; margin-left:8px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此站點嗎？');">刪除</button>
                         </form>
                         <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:8px;" data-spot-id="{{ spot.id }}">
                             顯示合約
@@ -407,18 +408,6 @@ document.getElementById('copyLinkBtn').addEventListener('click', function() {
     document.execCommand('copy');
     alert('連結已複製');
     $('#copyLinkModal').modal('hide');
-});
-
-// 刪除站點
-document.querySelectorAll('.delete-spot-form').forEach(function(form) {
-    var btn = form.querySelector('button[type="button"]');
-    btn.addEventListener('click', function() {
-        if (confirm('確定要刪除此站點嗎？')) {
-            var spotId = form.getAttribute('data-spot-id');
-            form.action = '{{ url_for("main.delete_spot", spot_id=0) }}'.replace('0', spotId);
-            form.submit();
-        }
-    });
 });
 
 // 顯示合約
