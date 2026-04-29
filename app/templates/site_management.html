@@ -206,7 +206,9 @@
 
     <!-- 新建站點按鈕 -->
     <div class="action-bar">
-        <a href="{{ url_for('main.add_spot') }}" class="btn-gradient">新建站點</a>
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addSpotModal">
+            新建站點
+        </button>
     </div>
 
     <!-- 站點列表表格 -->
@@ -399,6 +401,62 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- 新建站點的 Modal -->
+<div class="modal fade" id="addSpotModal" tabindex="-1" aria-labelledby="addSpotModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSpotModalLabel">新建站點</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('main.add_spot') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="site_name">站點名稱</label>
+                        <input type="text" class="form-control" id="site_name" name="site_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">描述</label>
+                        <input type="text" class="form-control" id="description" name="description">
+                    </div>
+                    <div class="form-group">
+                        <label for="longitude">經度</label>
+                        <input type="number" step="any" class="form-control" id="longitude" name="longitude">
+                    </div>
+                    <div class="form-group">
+                        <label for="latitude">緯度</label>
+                        <input type="number" step="any" class="form-control" id="latitude" name="latitude">
+                    </div>
+                    <div class="form-group">
+                        <label for="gw_list">GW 列表 (以逗號分隔)</label>
+                        <input type="text" class="form-control" id="gw_list" name="gw_list">
+                    </div>
+                    <div class="form-group">
+                        <label for="project_code">專案代碼</label>
+                        <input type="text" class="form-control" id="project_code" name="project_code">
+                    </div>
+                    <div class="form-group">
+                        <label for="client_id">客戶</label>
+                        <select class="form-control" id="client_id" name="client_id">
+                            <option value="">請選擇客戶</option>
+                            {% for client in all_clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                    <button type="submit" class="btn-gradient">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <script>
