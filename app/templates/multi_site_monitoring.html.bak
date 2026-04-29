@@ -1,0 +1,360 @@
+{% extends "base1.html" %}
+
+{% block title %}多案場監控{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        /* ===== 白色主題 - 覆蓋所有層級 ===== */
+        body, html {
+            background: #ffffff !important;
+            color: #1f2937;
+        }
+
+        .container-fluid {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        /* ── 全域：所有灰色區塊改亮色 ── */
+        .monitoring-section,
+        .soc-bar-container,
+        .metric-item,
+        .power-item {
+            background: #ffffff !important;
+        }
+
+        .soc-section,
+        .delta-v-section,
+        .power-section {
+            background: transparent !important;
+            border-color: #eef0f2 !important;
+        }
+
+        /* ── 卡片標題列：更淺的灰白 ── */
+        .card-header-bar {
+            background: linear-gradient(135deg, #ffffff, #f8f9fa) !important;
+        }
+
+        /* ── 頂部標題列 ── */
+        .page-header-bar {
+            background: linear-gradient(135deg, #667eea, #764ba2) !important;
+            padding: 28px 32px;
+            border-radius: 12px 12px 0 0;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header-bar h2 {
+            margin: 0;
+            font-size: 26.4px !important;
+            color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.3;
+        }
+
+        .page-header-bar .subtitle {
+            font-size: 26.4px !important;
+            color: white !important;
+            margin-top: 4px;
+            opacity: 0.85;
+        }
+
+        /* ── 白色主題卡片 ── */
+        .monitoring-section {
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .monitoring-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+        }
+
+        /* ── 卡片標題列 ── */
+        .card-header-bar {
+            background: linear-gradient(135deg, #f8f9ff, #eef1f7);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4338ca;
+        }
+
+        .card-timestamp {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        /* ── SOC 條 ── */
+        .soc-section {
+            padding: 16px 20px;
+            background: #f9fafb;
+        }
+
+        .soc-bar-container {
+            background: #e5e7eb;
+            height: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .soc-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #4ade80);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+        }
+
+        .soc-bar-fill.low {
+            background: linear-gradient(90deg, #ef4444, #f59e0b);
+        }
+
+        .soc-text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        /* ── 指標網格 ── */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 16px 20px;
+        }
+
+        .metric-item {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-value.purple { color: #a855f7; }
+        .metric-value.yellow { color: #fbbf24; }
+        .metric-value.red { color: #ef4444; }
+        .metric-value.cyan { color: #06b6d4; }
+
+        /* ── Delta V ── */
+        .delta-v-section {
+            padding: 8px 10px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            font-size: 13px;
+            color: #1f2937;
+        }
+
+        /* ── 功率區 ── */
+        .power-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .power-item {
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .power-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+
+        .power-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .power-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .power-tag.charging {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .power-tag.discharging {
+            background: #4ade80;
+            color: #1a1a1a;
+        }
+
+        .power-tag.idle {
+            background: #6b7280;
+            color: white;
+        }
+
+        /* ── 無資料 ── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 20px;
+            color: #9ca3af;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+
+        /* ── 狀態徽章 ── */
+        .status-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .status-badge.online  { background: #22c55e; }
+        .status-badge.offline { background: #4b5563; }
+
+    </style>
+{% endblock %}
+
+{% block page_content %}
+<div class="multi-site-wrapper">
+    <!-- 頂部標題列 -->
+    <div class="page-header-bar">
+        <div>
+            <h2>
+                <span style="font-size: 32px;">⚡</span>
+                BESS 多場域監控
+            </h2>
+            <div class="subtitle">即時儲能系統數據</div>
+        </div>
+    </div>
+
+    <!-- 監控卡片網格 -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr); gap: 20px; padding: 24px 32px;" class="site-grid">
+        {% for site in sites %}
+        <div class="monitoring-section" data-id="{{ site.id }}">
+            <!-- 卡片標題 -->
+            <div class="card-header-bar">
+                <div>
+                    <div class="card-title">📍 {{ site.name }}</div>
+                </div>
+                <div class="card-timestamp">{{ site.time }}</div>
+            </div>
+
+            <!-- SOC 條 -->
+            {% if site.soc > 0 %}
+            <div class="soc-section">
+                <div class="soc-bar-container">
+                    <div class="soc-bar-fill {% if site.soc < 20 %}low{% endif %}" style="width: {{ site.soc }}%">
+                    </div>
+                    <div class="soc-text-overlay">SOC {{ "%.1f"|format(site.soc) }}%</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 指標網格 -->
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">SOH</div>
+                    <div class="metric-value purple">{{ "%.1f"|format(site.soh) }}%</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">溫度</div>
+                    <div class="metric-value yellow">{{ "%.1f"|format(site.temperature) }}°C</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Cell 最高</div>
+                    <div class="metric-value red">{{ "%.4f"|format(site.cell_max) }}V</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Cell 最低</div>
+                    <div class="metric-value cyan">{{ "%.4f"|format(site.cell_min) }}V</div>
+                </div>
+            </div>
+
+            <!-- Delta V -->
+            <div style="padding: 8px 20px; background: #ffffff; border-top: 1px solid #eef0f2; font-size: 14px; color: #1f2937;">
+                ΔV = {{ "%.3f"|format(site.delta_v) }} V
+            </div>
+
+            <!-- 功率區 -->
+            <div class="power-section">
+                <div class="power-item">
+                    <div class="power-label" style="color: #6b7280;">即時功率</div>
+                    <div class="power-value" style="color: #0891b2; font-size: 24px; font-weight: 700;">{{ "%.1f"|format(site.power) }} kW</div>
+                    {% if site.power > 0 %}
+                    <span class="power-tag charging">充電</span>
+                    {% elif site.power < 0 %}
+                    <span class="power-tag discharging">放電</span>
+                    {% else %}
+                    <span class="power-tag idle">待機</span>
+                    {% endif %}
+                </div>
+                <div class="power-item">
+                    <div class="power-label">EMS 設定</div>
+                    <div class="power-value" style="color: #6b7280;">{{ "%.1f"|format(site.ems_setting) }} kW</div>
+                </div>
+            </div>
+
+            <!-- 狀態徽章 -->
+            {% if site.online %}
+            <div style="text-align: right; padding: 12px 20px; background: #ffffff;">
+                <span class="status-badge online" title="Online">✓</span>
+            </div>
+            {% else %}
+            <div style="text-align: right; padding: 12px 20px; background: #ffffff;">
+                <span class="status-badge offline" title="Offline">✗</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- 如果沒有資料，顯示空狀態 -->
+        {% if not sites %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: #9ca3af;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📡</div>
+            <div style="font-size: 18px;">等待資料...</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
