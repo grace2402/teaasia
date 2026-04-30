@@ -402,6 +402,12 @@ def site_management(spot_id):
                                client_id=client_id,
                                all_clients=all_clients)
 
+# ========== Site Monitoring (alias) ==========
+@main.route('/site_monitoring')
+def site_monitoring():
+    from flask import redirect
+    return redirect(url_for('main.multi_site_monitoring'))
+
 # ========== Multi Site Monitoring ==========
 @main.route('/multi_site_monitoring')
 @login_required
