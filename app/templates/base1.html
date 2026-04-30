@@ -371,6 +371,21 @@
         .alert {
             border-radius: var(--card-radius) !important;
             font-size: 24.0px !important;
+            margin-bottom: 16px !important;
+        }
+        .alert-success {
+            background-color: #d4edda !important;
+            border: 2px solid #28a745 !important;
+            border-radius: var(--card-radius) !important;
+            color: #155724 !important;
+            font-size: 21.6px !important;
+        }
+        .alert-danger {
+            background-color: #f8d7da !important;
+            border: 2px solid #dc3545 !important;
+            border-radius: var(--card-radius) !important;
+            color: #721c24 !important;
+            font-size: 21.6px !important;
         }
         .alert-warning {
             background-color: #fff3cd !important;
@@ -539,11 +554,10 @@
 
 {% block content %}
 <div class="container-fluid">
-    {% for message in get_flashed_messages() %}
-    <div class="alert alert-warning">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="alert alert-{{ category }}">{% if category == 'danger' %}
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        {{ message }}
-    </div>
+    {% endif %}{{ message }}</div>
     {% endfor %}
 
     {% block page_content %}{% endblock %}
