@@ -3,7 +3,8 @@
 {% block title %}新增站點{% endblock %}
 
 {% block page_content %}
-<div class="container">
+<div class="container-fluid">
+<div class="edit-card">
     <h2>新增站點</h2>
     <form method="post">
         {{ form.hidden_tag() }}
@@ -45,4 +46,5 @@
         <a href="{{ url_for('main.site_management') }}" class="btn btn-secondary">取消</a>
     </form>
 </div>
-{% endblock %}
+
+</div>{% endblock %}

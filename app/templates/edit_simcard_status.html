@@ -2,10 +2,12 @@
 
 {% block title %}
 編輯 SIM 卡狀態
+</div>
 {% endblock %}
 
 {% block page_content %}
-<div class="container mt-5">
+<div class="container-fluid">
+<div class="edit-card">
     <h2>編輯 SIM 卡狀態</h2>
     <form method="post" action="{{ url_for('main.edit_simcard_status', record_id=record.id) }}">
         <!-- CSRF 隱藏欄位 -->

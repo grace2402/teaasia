@@ -1,7 +1,8 @@
 {% extends "base1.html" %}
 
 {% block page_content %}
-<div class="container mt-5">
+<div class="container-fluid">
+<div class="edit-card">
     <h2>編輯維運紀錄</h2>
     <form action="{{ url_for('main.edit_maintenance_record', record_id=record.id) }}" method="POST">
         {{ form.hidden_tag() }}
@@ -44,4 +45,5 @@
         <a href="{{ url_for('main.maintenance_records') }}" class="btn btn-secondary">取消</a>
     </form>
 </div>
-{% endblock %}
+
+</div>{% endblock %}

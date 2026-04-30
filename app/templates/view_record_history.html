@@ -5,7 +5,8 @@
 {% endblock %}
 
 {% block page_content %}
-<div class="container mt-5">
+<div class="container-fluid">
+<div class="edit-card">
     <h2>維運紀錄歷史版本</h2>
     <p><strong>當前紀錄:</strong> {{ record.description }}</p>
 
@@ -41,4 +42,5 @@
 
     <a href="{{ url_for('main.maintenance_records') }}" class="btn btn-secondary">返回維運紀錄</a>
 </div>
-{% endblock %}
+
+</div>{% endblock %}

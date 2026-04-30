@@ -3,7 +3,8 @@
 {% block title %}編輯合約{% endblock %}
 
 {% block page_content %}
-<div class="container">
+<div class="container-fluid">
+<div class="edit-card">
     <h2>編輯合約</h2>
     <form method="post" action="">
         {{ form.hidden_tag() }}
@@ -39,4 +40,5 @@
         <a href="{{ url_for('main.contract_management') }}" class="btn btn-secondary">取消</a>
     </form>
 </div>
-{% endblock %}
+
+</div>{% endblock %}
