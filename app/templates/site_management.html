@@ -5,6 +5,27 @@
 {% block head %}
     {{ super() }}
     <style>
+        /* ── 操作列按鈕縮小 ── */
+        .actions-cell { white-space: nowrap; }
+        .actions-cell .btn-gradient-sm,
+        .actions-cell button.btn-gradient-sm,
+        .actions-cell a.btn-gradient-sm {
+            font-size: 16px !important;
+            padding: 5px 10px !important;
+            line-height: 1.4 !important;
+            margin-left: 4px !important;
+        }
+
+        /* ── 監控及操作欄位內容字型 (覆蓋 base1.html !important) ── */
+        .styled-table tbody td:nth-child(8) {
+            font-size: 20px !important;
+            white-space: nowrap !important;
+        }
+        .actions-cell .expand-btn {
+            font-size: 16px !important;
+            padding: 5px 10px !important;
+        }
+
         /* ── 深色主題監控區塊 ── */
         .monitoring-section {
             background: #1a2a3a;
@@ -222,6 +243,8 @@
                     <th>緯度</th>
                     <th>GW列表</th>
                     <th>專案代碼</th>
+                    <th>PCS UUID</th>
+                    <th>監控</th>
                     <th>操作</th>
                 </tr>
             </thead>
@@ -231,33 +254,35 @@
                 <tr>
                     <td>{{ spot.site_name }}</td>
                     <td>{{ spot.description }}</td>
-                    <td>{{ spot.longitude }}</td>
-                    <td>{{ spot.latitude }}</td>
+                    <td>{{ spot.longitude|round(2) if spot.longitude else '' }}</td>
+                    <td>{{ spot.latitude|round(2) if spot.latitude else '' }}</td>
                     <td class="gw-list-column">
                         {{ (spot.gw_list or [])|join('<br>')|safe }}
                     </td>
                     <td>{{ spot.project_code }}</td>
-                    <td>
-                        <a href="{{ url_for('main.edit_spot', spot_id=spot.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯站點</a>
-                        <form method="POST" action="{{ url_for('main.delete_spot', spot_id=spot.id) }}" style="display:inline; margin-left:8px;">
+                    <td style="font-family:monospace;font-size:11px;word-break:break-all;">{{ (spot.pcs_uuid or [])|join('<br>')|safe if spot.pcs_uuid else '-' }}</td>
+                    <td style="text-align:center;">{% if spot.enable_monitoring %}<span style="color:#4ade80;">● 啟用</span>{% else %}<span style="color:#6b7280;">○ 未啟</span>{% endif %}</td>
+                    <td class="actions-cell">
+                        <a href="{{ url_for('main.edit_spot', spot_id=spot.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+                        <form method="POST" action="{{ url_for('main.delete_spot', spot_id=spot.id) }}" style="display:inline; margin-left:4px;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此站點嗎？');">刪除</button>
                         </form>
-                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:8px;" data-spot-id="{{ spot.id }}">
-                            顯示合約
+                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:4px;" data-spot-id="{{ spot.id }}">
+                            合約
                         </button>
-                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#28a745,#218838); margin-left:8px;"
+                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#28a745,#218838); margin-left:4px;"
                                 data-link="{{ url_for('main.site_detail', spot_id=spot.id, _external=True) }}">
-                            複製連結
+                            連結
                         </button>
-                        <button type="button" class="expand-btn" style="margin-left:8px;" data-expand="spot-{{ spot.id }}">
+                        <button type="button" class="expand-btn" style="margin-left:4px;" data-expand="spot-{{ spot.id }}">
                             監控
                         </button>
                     </td>
                 </tr>
                 <!-- 合約資訊隱藏列 -->
                 <tr class="contract-row" id="contract-row-{{ spot.id }}" style="display:none;">
-                    <td colspan="7">
+                    <td colspan="9">
                         {% set contracts = spot_contract_map[spot.id] %}
                         {% if contracts and contracts|length > 0 %}
                             {% for contract in contracts %}
@@ -271,7 +296,7 @@
                 </tr>
                 <!-- 監控資料隱藏列 -->
                 <tr class="monitoring-row" id="monitoring-row-{{ spot.id }}" style="display:none;">
-                    <td colspan="7">
+                    <td colspan="9">
                         {% if spot.monitoring %}
                         <div class="monitoring-section">
                             <div class="monitoring-header">
@@ -439,6 +464,15 @@
                     <div class="form-group">
                         <label for="project_code">專案代碼</label>
                         <input type="text" class="form-control" id="project_code" name="project_code">
+                    </div>
+                    <div class="form-group">
+                        <label for="pcs_uuid">PCS UUID (多個以逗號分隔)</label>
+                        <input type="text" class="form-control" id="pcs_uuid" name="pcs_uuid" placeholder="例: abc123-def456, xyz789-uvw012">
+                        <small style="color:#8899aa;">BESS 儲能系統的 PCS/BMS UUID，用於 MQTT 資料匹配</small>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="enable_monitoring" name="enable_monitoring" value="1">
+                        <label for="enable_monitoring" style="margin:0;">啟用多案場監控</label>
                     </div>
                     <div class="form-group">
                         <label for="client_id">客戶</label>

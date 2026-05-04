@@ -32,6 +32,14 @@
             {{ form.project_code.label }}
             {{ form.project_code(class="form-control") }}
         </div>
+        <div class="form-group">
+            {{ form.pcs_uuid.label }}
+            {{ form.pcs_uuid(class="form-control", placeholder="多個UUID用逗號分隔, 例: uuid1,uuid2") }}
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+            {{ form.enable_monitoring() }}
+            {{ form.enable_monitoring.label }}
+        </div>
         <!-- 新增客戶選項 -->
         <div class="form-group">
             <label for="client">客戶</label>

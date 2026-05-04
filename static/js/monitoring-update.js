@@ -41,7 +41,11 @@ function updateSite(uuid, items) {
       return;
     }
 
-    if (scope === 'soh')                        { setVal('soh-'  + uuid, val); return; }
+    if (scope === 'soh') {
+      console.log('[Update] SOH received for', uuid, ':', val);
+      setVal('soh-' + uuid, val);
+      return;
+    }
     if (scope === 'cellHighestTemperature')     { setVal('temp-' + uuid, val); return; }
 
     if (scope === 'emsSetPoint') {

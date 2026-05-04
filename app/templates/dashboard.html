@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BESS 多場域監控</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f6fa; --card: #ffffff; --card2: #f0f2f7; --border: #dde1ea;
+      --text: #1a1d2e; --muted: #8a93aa;
+      --green: #16a96e; --green-dim: #d0f5e8;
+      --blue: #2a7ef5;  --blue-dim: #ddeeff;
+      --yellow: #d4960a; --yellow-dim: #fef3d0;
+      --red: #e03030;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Noto Sans TC', sans-serif;
+    }
+    body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; padding: 20px; }
+
+    .top-bar { display: flex; align-items: center; margin-bottom: 16px; }
+    .top-bar h1 { font-size: 18px; font-weight: 700; letter-spacing: .04em; }
+    .top-bar .subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .conn-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 10px 16px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .conn-bar label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .conn-bar input {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: var(--mono); font-size: 13px; padding: 6px 10px;
+    }
+    .btn {
+      background: var(--blue); border: none; border-radius: 6px; color: #fff; cursor: pointer;
+      font-family: var(--sans); font-size: 13px; font-weight: 500;
+      padding: 7px 16px; transition: opacity .2s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn.danger { background: var(--red); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+    .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+    .status-dot.error { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    #conn-label { font-size: 13px; color: var(--muted); min-width: 80px; }
+
+    .sites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+    .site-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .site-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .site-name { font-size: 15px; font-weight: 700; }
+    .site-uuid { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+    .site-time { font-size: 11px; color: var(--muted); font-family: var(--mono); text-align: right; }
+
+    .soc-wrap { margin-bottom: 14px; }
+    .soc-track { background: var(--card2); border-radius: 100px; height: 24px; overflow: hidden; position: relative; }
+    .soc-fill { background: linear-gradient(90deg, #2ecc8a, #4b9fff); border-radius: 100px; height: 100%; width: 0%; transition: width 1s ease; }
+    .soc-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; font-weight: 500; color: #fff; transition: color .3s; }
+    .soc-label.dark { color: #1a1d2e; }
+
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .metric { background: var(--card2); border-radius: 8px; padding: 10px 12px; border-left: 3px solid transparent; }
+    .metric.purple { border-color: #a06cff; }
+    .metric.yellow { border-color: var(--yellow); }
+    .metric.red    { border-color: var(--red); }
+    .metric.blue   { border-color: var(--blue); }
+    .metric .m-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+    .metric .m-value { font-family: var(--mono); font-size: 18px; font-weight: 500; line-height: 1; }
+    .metric.purple .m-value { color: #a06cff; }
+    .metric.yellow .m-value { color: var(--yellow); }
+    .metric.red    .m-value { color: var(--red); }
+    .metric.blue   .m-value { color: var(--blue); }
+    .m-unit { font-size: 11px; color: var(--muted); margin-left: 1px; }
+
+    .delta-row { text-align: right; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .delta-row strong { color: var(--text); font-family: var(--mono); }
+
+    .power-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .power-card { background: var(--card2); border-radius: 8px; padding: 12px 14px; }
+    .power-card .p-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+    .p-value { font-family: var(--mono); font-size: 24px; font-weight: 500; transition: color .3s; }
+    .p-value.discharging { color: var(--green); }
+    .p-value.charging    { color: var(--blue); }
+    .p-value.idle        { color: var(--muted); }
+    .p-unit { font-size: 12px; color: var(--muted); margin-left: 2px; }
+    .badge { display: inline-block; border-radius: 4px; font-size: 10px; font-weight: 500; padding: 2px 6px; margin-left: 5px; vertical-align: middle; }
+    .badge.dis { background: var(--green-dim); color: var(--green); }
+    .badge.chg { background: var(--blue-dim);  color: var(--blue); }
+    .ems-val { font-family: var(--mono); font-size: 24px; font-weight: 500; color: var(--blue); }
+
+    .forecast-wrap { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .forecast-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .forecast-title { font-size: 11px; color: var(--muted); }
+    .forecast-status { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: var(--green-dim); color: var(--green); }
+    .forecast-status.warn  { background: var(--yellow-dim); color: var(--yellow); }
+    .forecast-status.alert { background: var(--red); color: #fff; }
+    .forecast-track { background: var(--card2); border-radius: 6px; height: 16px; overflow: hidden; position: relative; }
+    .forecast-fill { background: var(--green); height: 100%; width: 0%; border-radius: 6px 0 0 6px; transition: width 1s ease; }
+    .forecast-fill.warn  { background: var(--yellow); }
+    .forecast-fill.alert { background: var(--red); }
+    .forecast-contract-line { position: absolute; top: 0; bottom: 0; border-left: 2px dashed var(--muted); }
+    .forecast-nums { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); }
+    .f-val { color: var(--text); font-family: var(--mono); }
+    .f-pct { font-family: var(--mono); color: var(--green); }
+    .f-pct.warn  { color: var(--yellow); }
+    .f-pct.alert { color: var(--red); }
+
+    /* flash animation removed */
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div>
+    <h1>&#x26A1; BESS 多場域監控</h1>
+    <div class="subtitle">即時儲能系統數據</div>
+  </div>
+</div>
+
+<div class="conn-bar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="conn-label">未連線</span>
+  <label>Host</label>
+  <input id="cfg-host" type="text" value="119.31.178.22" style="width:150px">
+  <label>Port</label>
+  <input id="cfg-port" type="text" value="8083" style="width:65px">
+  <label>Topic</label>
+  <input id="cfg-topic" type="text" value="ND_ScMaintenance" style="width:180px">
+  <button class="btn" id="btn-connect">連線</button>
+  <button class="btn danger" id="btn-disconnect" style="display:none">斷線</button>
+</div>
+
+<div class="sites-grid" id="sites-grid"></div>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+// uuid 可以是單一字串，也可以是陣列（多個 uuid 共用同一張卡片）
+// uuid 可以是單一字串或陣列（多 uuid 共用一張卡片）
+// location: [緯度, 經度]
+var SITES = [
+  { uuid: '4042479a-6648-4299-bdbb-cd0e55c08d30',                                             name: '國泰八德', location: [24.9397, 121.3006] },
+  { uuid: ['c3db1581-74dc-4c07-8ee5-580c77b3884d', 'fecaae3e-0d4a-4adb-a79c-59f05a0d1cf9'],   name: '國泰烏日', location: [24.1249, 120.6452] },
+  { uuid: ['66218d11-ab23-4a4b-ae75-2b47e220f27c', '07d00651-3c45-4129-a539-43099e95d168'],   name: '中櫃台中', location: [24.1469, 120.6839] },
+  { uuid: ['1ca897dc-bdc0-4f03-ba39-753d9b183a9e', '1d4f6d8e-259a-4a2f-8b37-5b2d31c6cfaf', '9da81f6e-9439-464e-ac16-cda42cdfb552'],   name: '順益中壢', location: [24.96827116905552, 121.23746621534256] },
+];
+
+function buildCard(uuid, name) {
+  var h = '';
+  h += '<div class="site-card" id="card-' + uuid + '">';
+  h +=   '<div class="site-header">';
+  h +=     '<div>';
+  h +=       '<div class="site-name">' + name + '</div>';
+  h +=       '<div class="site-uuid">' + uuid + '</div>';
+  h +=     '</div>';
+  h +=     '<div class="site-time" id="time-' + uuid + '">--</div>';
+  h +=   '</div>';
+  h +=   '<div class="soc-wrap">';
+  h +=     '<div class="soc-track">';
+  h +=       '<div class="soc-fill" id="soc-fill-' + uuid + '"></div>';
+  h +=       '<div class="soc-label" id="soc-label-' + uuid + '">SOC --</div>';
+  h +=     '</div>';
+  h +=   '</div>';
+  h +=   '<div class="metrics">';
+  h +=     '<div class="metric purple"><div class="m-label">SOH</div><div class="m-value" id="soh-' + uuid + '"><span class="val">--</span><span class="m-unit">%</span></div></div>';
+  h +=     '<div class="metric yellow"><div class="m-label">溫度</div><div class="m-value" id="temp-' + uuid + '"><span class="val">--</span><span class="m-unit">°C</span></div></div>';
+  h +=     '<div class="metric red"><div class="m-label">Cell 最高</div><div class="m-value" id="cellmax-' + uuid + '"><span class="val">--</span><span class="m-unit">V</span></div></div>';
+  h +=     '<div class="metric blue"><div class="m-label">Cell 最低</div><div class="m-value" id="cellmin-' + uuid + '"><span class="val">--</span><span class="m-unit">V</span></div></div>';
+  h +=   '</div>';
+  h +=   '<div class="delta-row">&#x394;V = <strong id="deltav-' + uuid + '">-- mV</strong></div>';
+  h +=   '<div class="power-row">';
+  h +=     '<div class="power-card">';
+  h +=       '<div class="p-label">即時功率</div>';
+  h +=       '<div><span class="p-value idle" id="rp-' + uuid + '">--</span><span class="p-unit">kW</span><span class="badge" id="badge-' + uuid + '" style="display:none"></span></div>';
+  h +=     '</div>';
+  h +=     '<div class="power-card">';
+  h +=       '<div class="p-label">EMS 設定</div>';
+  h +=       '<div><span class="ems-val" id="ems-' + uuid + '">--</span><span class="p-unit">kW</span></div>';
+  h +=     '</div>';
+  h +=   '</div>';
+  h +=   '<div class="forecast-wrap">';
+  h +=     '<div class="forecast-header">';
+  h +=       '<span class="forecast-title">15 分鐘預測需量 vs 契約</span>';
+  h +=       '<span class="forecast-status" id="fc-status-' + uuid + '">--</span>';
+  h +=     '</div>';
+  h +=     '<div class="forecast-track">';
+  h +=       '<div class="forecast-fill" id="fc-fill-' + uuid + '"></div>';
+  h +=       '<div class="forecast-contract-line" id="fc-line-' + uuid + '" style="left:100%"></div>';
+  h +=     '</div>';
+  h +=     '<div class="forecast-nums">';
+  h +=       '<span>需量 <span class="f-val" id="fc-demand-' + uuid + '">--</span> kW</span>';
+  h +=       '<span>契約 <span class="f-val" id="fc-contract-' + uuid + '">--</span> kW</span>';
+  h +=       '<span class="f-pct" id="fc-pct-' + uuid + '">--%</span>';
+  h +=     '</div>';
+  h +=   '</div>';
+  h += '</div>';
+  return h;
+}
+
+var grid = document.getElementById('sites-grid');
+// SITE_MAP: 每個 uuid → 卡片的 primaryUuid（第一個 uuid）
+var SITE_MAP = {};
+SITES.forEach(function(s) {
+  var uuids = Array.isArray(s.uuid) ? s.uuid : [s.uuid];
+  var primaryUuid = uuids[0];
+  grid.insertAdjacentHTML('beforeend', buildCard(primaryUuid, s.name));
+  uuids.forEach(function(u) { SITE_MAP[u] = primaryUuid; });
+});
+
+var mqttClient = null;
+var dot       = document.getElementById('status-dot');
+var connLabel = document.getElementById('conn-label');
+var btnConn   = document.getElementById('btn-connect');
+var btnDisc   = document.getElementById('btn-disconnect');
+
+function setConnected(ok) {
+  dot.className = 'status-dot ' + (ok ? 'connected' : '');
+  connLabel.textContent = ok ? '已連線' : '未連線';
+  btnConn.style.display = ok ? 'none' : '';
+  btnDisc.style.display = ok ? '' : 'none';
+}
+function setError(msg) {
+  dot.className = 'status-dot error';
+  connLabel.textContent = '錯誤: ' + msg;
+  btnConn.style.display = '';
+  btnDisc.style.display = 'none';
+}
+function flash(el) {
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+function setVal(elId, value) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  var span = el.querySelector('.val');
+  if (span) { span.textContent = value; flash(el); }
+}
+function updateForecast(uuid) {
+  var dEl = document.getElementById('fc-demand-'   + uuid);
+  var cEl = document.getElementById('fc-contract-' + uuid);
+  if (!dEl || !cEl) return;
+  var d = parseFloat(dEl.textContent.replace(/,/g, ''));
+  var c = parseFloat(cEl.textContent.replace(/,/g, ''));
+  if (isNaN(d) || isNaN(c) || c <= 0) return;
+  var pct    = Math.min((d / c) * 100, 100);
+  var pctRaw = (d / c * 100).toFixed(1);
+  var state  = pct >= 100 ? 'alert' : pct >= 85 ? 'warn' : '';
+  var fillEl   = document.getElementById('fc-fill-'   + uuid);
+  var lineEl   = document.getElementById('fc-line-'   + uuid);
+  var pctEl    = document.getElementById('fc-pct-'    + uuid);
+  var statusEl = document.getElementById('fc-status-' + uuid);
+  if (fillEl)   { fillEl.style.width = pct + '%'; fillEl.className = 'forecast-fill' + (state ? ' ' + state : ''); }
+  if (lineEl)   { lineEl.style.left  = Math.min((c / Math.max(d, c)) * 100, 100) + '%'; }
+  if (pctEl)    { pctEl.textContent  = pctRaw + '%'; pctEl.className = 'f-pct' + (state ? ' ' + state : ''); }
+  if (statusEl) {
+    if (state === 'alert')     { statusEl.textContent = '超標'; statusEl.className = 'forecast-status alert'; }
+    else if (state === 'warn') { statusEl.textContent = '注意'; statusEl.className = 'forecast-status warn'; }
+    else                       { statusEl.textContent = '正常'; statusEl.className = 'forecast-status'; }
+  }
+}
+
+
+// ══════════════════════════════════════════════════════
+// normalUsageGrid → forecastDemand 計算引擎
+// 儲存結構 localStorage key: bess_usage_{uuid}
+// value: { "YYYY-MM-DD_HH_Q": { minute: kWh, ... }, ... }
+// Q = 0(00-15), 1(15-30), 2(30-45), 3(45-60)
+// ══════════════════════════════════════════════════════
+
+var USAGE_LS_PREFIX = 'bess_usage_';
+var RETENTION_DAYS  = 30;
+
+function getIntervalKey(date) {
+  var y  = date.getFullYear();
+  var mo = String(date.getMonth() + 1).padStart(2, '0');
+  var d  = String(date.getDate()).padStart(2, '0');
+  var h  = String(date.getHours()).padStart(2, '0');
+  var q  = Math.floor(date.getMinutes() / 15); // 0,1,2,3
+  return y + '-' + mo + '-' + d + '_' + h + '_' + q;
+}
+
+function loadUsageStore(uuid) {
+  try {
+    var raw = localStorage.getItem(USAGE_LS_PREFIX + uuid);
+    return raw ? JSON.parse(raw) : {};
+  } catch(e) { return {}; }
+}
+
+function saveUsageStore(uuid, store) {
+  // 清理超過30天的資料
+  var cutoff = Date.now() - RETENTION_DAYS * 24 * 3600 * 1000;
+  Object.keys(store).forEach(function(key) {
+    // key format: YYYY-MM-DD_HH_Q
+    var parts = key.split('_');
+    var dateStr = parts[0]; // YYYY-MM-DD
+    var keyTs = new Date(dateStr).getTime();
+    if (keyTs < cutoff) delete store[key];
+  });
+  try {
+    localStorage.setItem(USAGE_LS_PREFIX + uuid, JSON.stringify(store));
+  } catch(e) { console.warn('localStorage write failed', e); }
+}
+
+function processNormalUsage(uuid, kWh, timestamp) {
+  var date        = new Date(timestamp);
+  var minute      = date.getMinutes();
+  var intervalKey = getIntervalKey(date);
+
+  // 載入並更新
+  var store = loadUsageStore(uuid);
+  if (!store[intervalKey]) store[intervalKey] = {};
+  store[intervalKey][minute] = kWh;
+  saveUsageStore(uuid, store);
+
+  // 計算目前區間的需量預估
+  var entries   = store[intervalKey];
+  var minutes   = Object.keys(entries).map(Number);
+  var count     = minutes.length;
+  var sumKwh    = 0;
+  minutes.forEach(function(m) { sumKwh += entries[m]; });
+  // 需量 (kW) = 平均每分鐘 kWh × 60
+  var forecast  = count > 0 ? (sumKwh / count) * 60 : 0;
+
+  // 更新 forecastDemand 顯示
+  var fdEl = document.getElementById('fc-demand-' + uuid);
+  if (fdEl) {
+    fdEl.textContent = Math.round(forecast).toLocaleString();
+    updateForecast(uuid);
+  }
+
+  // console log（可移除）
+  var q = Math.floor(minute / 15);
+  var labels = ['00-15', '15-30', '30-45', '45-60'];
+  console.log('[' + uuid.substring(0,8) + '] 區間 ' + labels[q] +
+    ' | 已收 ' + count + ' 筆 | 需量預估 ' + Math.round(forecast) + ' kW');
+}
+
+function updateSite(uuid, items) {
+  items.forEach(function(item) {
+    var scope = item.scope;
+    var val   = parseFloat(item.value);
+
+    if (item.generatedTime) {
+      var tEl = document.getElementById('time-' + uuid);
+      if (tEl) tEl.textContent = new Date(item.generatedTime).toLocaleTimeString('zh-TW');
+    }
+
+    if (scope === 'storedElectricityPercent') {
+      var pct   = Math.min(Math.max(val, 0), 100);
+      var fill  = document.getElementById('soc-fill-'  + uuid);
+      var label = document.getElementById('soc-label-' + uuid);
+      if (fill)  fill.style.width = pct + '%';
+      if (label) {
+        label.textContent = 'SOC ' + val + '%';
+        label.className = 'soc-label' + (pct < 30 ? ' dark' : '');
+        flash(label);
+      }
+      return;
+    }
+
+    if (scope === 'realPower') {
+      var rpEl    = document.getElementById('rp-'    + uuid);
+      var badgeEl = document.getElementById('badge-' + uuid);
+      if (!rpEl) return;
+      rpEl.textContent = Math.abs(val).toLocaleString();
+      flash(rpEl);
+      if (val > 0) {
+        rpEl.className = 'p-value discharging';
+        if (badgeEl) { badgeEl.textContent = '放電'; badgeEl.className = 'badge dis'; badgeEl.style.display = ''; }
+      } else if (val < 0) {
+        rpEl.className = 'p-value charging';
+        if (badgeEl) { badgeEl.textContent = '充電'; badgeEl.className = 'badge chg'; badgeEl.style.display = ''; }
+      } else {
+        rpEl.className = 'p-value idle';
+        if (badgeEl) badgeEl.style.display = 'none';
+      }
+      return;
+    }
+
+    if (scope === 'soh')         { setVal('soh-'  + uuid, val); return; }
+    if (scope === 'cellHighestTemperature') { setVal('temp-' + uuid, val); return; }
+
+    if (scope === 'emsSetPoint') {
+      var emsEl = document.getElementById('ems-' + uuid);
+      if (emsEl) { emsEl.textContent = val.toLocaleString(); flash(emsEl); }
+      return;
+    }
+
+    if (scope === 'cellHighestVoltage' || scope === 'cellLowestVoltage') {
+      var prefix = scope === 'cellHighestVoltage' ? 'cellmax' : 'cellmin';
+      setVal(prefix + '-' + uuid, val);
+      var maxEl = document.getElementById('cellmax-' + uuid);
+      var minEl = document.getElementById('cellmin-' + uuid);
+      var dvEl  = document.getElementById('deltav-'  + uuid);
+      if (maxEl && minEl && dvEl) {
+        var maxV = parseFloat(maxEl.querySelector('.val').textContent);
+        var minV = parseFloat(minEl.querySelector('.val').textContent);
+        if (!isNaN(maxV) && !isNaN(minV)) {
+          dvEl.textContent = (maxV - minV).toFixed(3) + ' V';
+        }
+      }
+      return;
+    }
+
+    if (scope === 'forecastDemand') {
+      var fdEl = document.getElementById('fc-demand-' + uuid);
+      if (fdEl) { fdEl.textContent = val.toLocaleString(); updateForecast(uuid); }
+      return;
+    }
+
+    if (scope === 'contractDemand') {
+      var fcEl = document.getElementById('fc-contract-' + uuid);
+      if (fcEl) { fcEl.textContent = val.toLocaleString(); updateForecast(uuid); }
+      return;
+    }
+
+    if (scope === 'normalUsageGrid') {
+      var ts = item.generatedTime || Date.now();
+      processNormalUsage(uuid, val, ts);
+      return;
+    }
+  });
+}
+
+// ── BroadcastChannel: share site state with map page ──
+var bc = new BroadcastChannel('bess_sites');
+
+function getSiteState(primaryUuid) {
+  var pctEl = document.getElementById('fc-pct-' + primaryUuid);
+  var pct = pctEl ? parseFloat(pctEl.textContent) : NaN;
+  var state = 'normal';
+  if (pct >= 100) state = 'alert';
+  else if (pct >= 85) state = 'warn';
+  return state;
+}
+
+function broadcastSiteStates() {
+  var states = {};
+  SITES.forEach(function(s) {
+    var uuids = Array.isArray(s.uuid) ? s.uuid : [s.uuid];
+    var primaryUuid = uuids[0];
+    states[primaryUuid] = {
+      name: s.name,
+      location: s.location || null,
+      state: getSiteState(primaryUuid)
+    };
+  });
+  bc.postMessage({ type: 'site_states', data: states });
+}
+
+btnConn.addEventListener('click', function() {
+  var host  = document.getElementById('cfg-host').value.trim();
+  var port  = parseInt(document.getElementById('cfg-port').value.trim());
+  var topic = document.getElementById('cfg-topic').value.trim();
+  if (mqttClient) { mqttClient.end(true); }
+  connLabel.textContent = '連線中...';
+  dot.className = 'status-dot';
+  mqttClient = mqtt.connect({ host: host, port: port, protocol: 'ws', path: '/mqtt' });
+  mqttClient.on('connect', function() {
+    setConnected(true);
+    if (topic) { mqttClient.subscribe(topic, function(err) { if (err) setError('Subscribe 失敗'); }); }
+  });
+  mqttClient.on('message', function(t, msg) {
+    try {
+      var json    = JSON.parse(msg.toString());
+      var arr     = json.data || [];
+      var grouped = {};
+      arr.forEach(function(item) {
+        if (!grouped[item.deviceUuid]) grouped[item.deviceUuid] = [];
+        grouped[item.deviceUuid].push(item);
+      });
+      Object.keys(grouped).forEach(function(uuid) {
+        var cardId = SITE_MAP[uuid];
+        if (cardId) updateSite(cardId, grouped[uuid]);
+      });
+      // Broadcast site states to map page
+      broadcastSiteStates();
+    } catch(e) { console.error('JSON parse error', e); }
+  });
+  mqttClient.on('error', function(err) { setError(err.message); });
+  mqttClient.on('close', function() { if (mqttClient) setConnected(false); });
+});
+
+btnDisc.addEventListener('click', function() {
+  if (mqttClient) { mqttClient.end(); mqttClient = null; }
+  setConnected(false);
+});
+</script>
+</body>
+</html>

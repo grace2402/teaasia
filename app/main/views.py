@@ -286,8 +286,10 @@ def site_management(spot_id):
             spot.description = form.description.data
             spot.longitude = form.longitude.data
             spot.latitude = form.latitude.data
-            spot.gw_list = [gw.strip() for gw in form.gw_list.data.split(',')] if form.gw_list.data else []
+            spot.gw_list = form.gw_list.data if form.gw_list.data else []
             spot.project_code = form.project_code.data
+            spot.pcs_uuid = form.pcs_uuid.data if form.pcs_uuid.data else []
+            spot.enable_monitoring = form.enable_monitoring.data
             db.session.commit()
             flash('站點資訊已更新')
             return redirect(url_for('main.site_management'))
@@ -412,44 +414,44 @@ def site_monitoring():
 @main.route('/multi_site_monitoring')
 @login_required
 def multi_site_monitoring():
-    # 從 Spot 讀取所有案場，每筆用 MockItem 產生模擬監控資料
-    spots = Spot.query.all()
+    # 只讀取 enable_monitoring=True 的案場
+    spots = Spot.query.filter(Spot.enable_monitoring == True).all()
 
-    class MockItem:
-        def __init__(self, id_val, name, soc, soh, temperature, cell_max, cell_min, power, ems_setting, updated_at, delta_v=0.450, predicted_demand=0.0, contract_capacity=200.0, usage_rate=75.0):
-            self.id = f'camp-{id_val}'
-            self.name = name
-            self.soc = soc
-            self.soh = soh
-            self.temperature = temperature
-            self.cell_max = cell_max
-            self.cell_min = cell_min
-            self.power = power
-            self.ems_setting = ems_setting
-            self.updated_at = updated_at
-            self.delta_v = delta_v
-            self.site_id = f'{id_val:04d}'
-            self.predicted_demand = predicted_demand
-            self.contract_capacity = contract_capacity
-            self.usage_rate = usage_rate
+    sites = []
+    for spot in spots:
+        pcs_uuid_list = spot.pcs_uuid if isinstance(spot.pcs_uuid, list) else (spot.pcs_uuid.split(',') if spot.pcs_uuid else [])
+        soc = 85.0 + (spot.id * 3) % 10
+        soh = 97.0 + (spot.id * 2) % 2
+        temperature = 31.0 + (spot.id * 4) % 3
+        cell_max = round(3.62 + (spot.id * 0.02), 3)
+        cell_min = round(3.18 - (spot.id * 0.01), 3)
+        power = -(145.0 + (spot.id * 5) % 30)
+        ems_setting = 200.0
+        delta_v = round(cell_max - cell_min, 3)
+        updated_at = '2026-04-24 {:02d}:{:02d}:00'.format(14 - spot.id, min(spot.id * 15, 59))
 
-    monitoring_items = [
-        MockItem(
-            spot.id,
-            spot.site_name or f'案場 {spot.id}',
-            85.0 + (spot.id * 3) % 10,          # SOC: 85-94%
-            97.0 + (spot.id * 2) % 2,             # SOH: 97-98%
-            31.0 + (spot.id * 4) % 3,             # Temp: 31-33°C
-            round(3.62 + (spot.id * 0.02), 3),    # Cell max voltage
-            round(3.18 - (spot.id * 0.01), 3),    # Cell min voltage
-            -(145.0 + (spot.id * 5) % 30),        # Power: negative = discharging
-            200.0,                                  # EMS setting
-            '2026-04-24 {:02d}:{:02d}:00'.format(14 - spot.id, min(spot.id * 15, 59)),
-        )
-        for spot in spots
-    ]
+        sites.append({
+            'id': f'camp-{spot.id}',
+            'name': spot.site_name or f'案場 {spot.id}',
+            'pcs_uuid': pcs_uuid_list,
+            'soc': soc,
+            'soh': soh,
+            'temperature': temperature,
+            'cell_max': cell_max,
+            'cell_min': cell_min,
+            'power': power,
+            'ems_setting': ems_setting,
+            'updated_at': updated_at,
+            'delta_v': delta_v,
+            'site_id': f'{spot.id:04d}',
+            'predicted_demand': 0.0,
+            'contract_capacity': 200.0,
+            'usage_rate': 75.0,
+            'time': updated_at.split(' ')[1] if ' ' in updated_at else updated_at,
+            'online': True,
+        })
 
-    return render_template('monitoring_system.html', items=monitoring_items)
+    return render_template('monitoring_system.html', items=sites)
 
 # ========== Kanban Board ==========
 @main.route('/kanban')
@@ -876,6 +878,8 @@ def add_spot():
         s.longitude = f.longitude.data if f.longitude.data else None
         s.latitude = f.latitude.data if f.latitude.data else None
         s.gw_list = f.gw_list.data if f.gw_list.data else None
+        s.pcs_uuid = f.pcs_uuid.data if f.pcs_uuid.data else None
+        s.enable_monitoring = f.enable_monitoring.data
         cid = request.form.get('client_id')
         s.client_id = int(cid) if cid else None
         db.session.add(s)

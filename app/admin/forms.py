@@ -95,6 +95,8 @@ class AddSpotForm(FlaskForm):
     latitude = FloatField('緯度', validators=[Optional()])
     gw_list = CommaSeparatedListField('GW清單（用逗號分隔）', validators=[Optional()])
     project_code = StringField('專案代碼', validators=[Optional()])
+    pcs_uuid = CommaSeparatedListField('PCS UUID (MQTT KEY)', validators=[Optional()])
+    enable_monitoring = BooleanField('啟用多案場監控')
     submit = SubmitField('提交')
 
 class DeleteForm(FlaskForm):

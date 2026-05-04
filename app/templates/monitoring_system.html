@@ -636,6 +636,10 @@
 
 <!-- MQTT: library + modules (load order matters) -->
 <script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
+<script>
+    // Inject sites data from backend — dynamic based on enable_monitoring=True spots
+    window.MONITORING_SITES = {{ items | tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/monitoring-config.js') }}"></script>
 <script src="{{ url_for('static', filename='js/monitoring-dom.js') }}"></script>
 <script src="{{ url_for('static', filename='js/monitoring-forecast-ui.js') }}"></script>

@@ -380,6 +380,8 @@ class Spot(db.Model):
     gw_list = db.Column(ARRAY(db.String), nullable=True)
     project_code = db.Column(db.String(128), nullable=True)
     client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=True)
+    pcs_uuid = db.Column(ARRAY(db.String), nullable=True)           # PCS UUID — MQTT 對接 KEY (支援多個)
+    enable_monitoring = db.Column(db.Boolean, default=False, nullable=True)  # 是否啟用多案場監控
     # 與 Client 的雙向關聯：對應 Client.spots
     client = db.relationship('Client', back_populates='spots', lazy=True)
 
@@ -393,7 +395,9 @@ class Spot(db.Model):
             'gw_list': self.gw_list or [],
             'project_code': self.project_code or '',
             'client': self.client.name if self.client else '',
-            'client_id': self.client.id if self.client else None
+            'client_id': self.client.id if self.client else None,
+            'pcs_uuid': self.pcs_uuid or [],
+            'enable_monitoring': self.enable_monitoring or False
         }
 
 
