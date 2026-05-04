@@ -540,6 +540,7 @@
                     <li><a href="{{ url_for('main.search_taipower_records') }}" class="{% if request.endpoint == 'main.search_taipower_records' %}active{% endif %}">電表查詢</a></li>
                     <!-- 新增confluencepage導覽 -->
                     <li> <a href="{{ url_for('main.confluence_overview') }}" class="{% if request.endpoint=='main.confluence_overview' %}active{% endif %}">專案管理</a></li>
+                    <li><a href="{{ url_for('main.kanban_board') }}" class="{% if request.endpoint == 'main.kanban_board' %}active{% endif %}">Kanban 看板</a></li>
             <ul class="nav navbar-nav navbar-right" style="margin: 0; padding: 0;">
                 {% if current_user.is_authenticated %}
                 <li><a href="{{ url_for('auth.logout') }}" class="logout-btn">登出</a></li>

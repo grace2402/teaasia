@@ -451,6 +451,48 @@ def multi_site_monitoring():
 
     return render_template('monitoring_system.html', items=monitoring_items)
 
+# ========== Kanban Board ==========
+@main.route('/kanban')
+@login_required
+def kanban_board():
+    """Kanban board for monitoring system project management"""
+    return render_template('kanban_board.html')
+
+@main.route('/kanban/tasks', methods=['GET', 'POST'])
+@login_required
+def kanban_tasks():
+    """CRUD operations for Kanban tasks - stored in localStorage via JS"""
+    if request.method == 'GET':
+        # Return default tasks if none exist
+        return jsonify(get_default_kanban_tasks())
+    elif request.method == 'POST':
+        data = request.json
+        return jsonify({'status': 'ok', 'task': data})
+
+def get_default_kanban_tasks():
+    """Default task cards for the monitoring system project"""
+    return [
+        # Backlog
+        {'id': 't1', 'title': '歷史數據資料庫化', 'description': '將 MQTT 歷史資料存入 SQLite/PostgreSQL，取代 localStorage', 'column': 'backlog', 'priority': 'high'},
+        {'id': 't2', 'title': '告警通知系統', 'description': 'SOC/SOH/溫度異常時觸發 Telegram Line 通知', 'column': 'backlog', 'priority': 'high'},
+        {'id': 't3', 'title': '數據匯出功能', 'description': 'CSV/PDF 匯出監控報告，支援時間範圍篩選', 'column': 'backlog', 'priority': 'medium'},
+        {'id': 't4', 'title': '案場地圖視覺化', 'description': 'Leaflet/Mapbox 整合，在地圖上顯示案場狀態', 'column': 'backlog', 'priority': 'low'},
+        {'id': 't5', 'title': '權限管理', 'description': '不同角色查看不同案場資料的 RBAC 系統', 'column': 'backlog', 'priority': 'medium'},
+        # To Do
+        {'id': 't6', 'title': 'Forecast UI 優化', 'description': 'monitoring-forecast-ui.js 視覺化改進，加入趨勢圖表', 'column': 'todo', 'priority': 'high'},
+        {'id': 't7', 'title': '深色/亮色主題切換', 'description': '使用 teaasia-css-white-theme skill 實作主題切換', 'column': 'todo', 'priority': 'medium'},
+        # In Progress
+        {'id': 't8', 'title': 'Kanban 看板系統', 'description': '建立專案管理看板，整合到 TeaAsia 系統', 'column': 'in_progress', 'priority': 'high'},
+        # Review
+        {'id': 't9', 'title': 'MQTT 斷線重連機制', 'description': 'monitoring-mqtt.js 自動重連 + 指數退避策略', 'column': 'review', 'priority': 'high'},
+        # Done
+        {'id': 't10', 'title': 'MQTT WebSocket 連線', 'description': 'monitoring-mqtt.js — mqtt.js CDN, ws://119.31.178.22:8083', 'column': 'done', 'priority': 'high'},
+        {'id': 't11', 'title': 'Topic 訊息解析', 'description': 'monitoring-parser.js — data[] 按 deviceUuid 分組', 'column': 'done', 'priority': 'high'},
+        {'id': 't12', 'title': '案場卡片動態建立', 'description': 'monitoring-card.js — SITES array → card HTML', 'column': 'done', 'priority': 'high'},
+        {'id': 't13', 'title': '多案場監控頁面', 'description': 'multi_site_monitoring.html + monitoring_system.html 路由', 'column': 'done', 'priority': 'high'},
+        {'id': 't14', 'title': 'Forecast 預測引擎', 'description': 'monitoring-forecast.js — localStorage 30天留存, 15min interval', 'column': 'done', 'priority': 'medium'},
+    ]
+
 # ========== Material Management (TW) ==========
 @main.route('/material_management')
 @login_required
