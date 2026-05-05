@@ -314,6 +314,16 @@ def import_taipower_excel_records():
 
 
 def create_jobs(app):
+    # GW 狀態自動檢查排程 (每5分鐘)
+    from app.main.gw_monitor import check_all_spots as _check_all_spots
+    scheduler.add_job(
+        id='check_gw_status_job',
+        func=_check_all_spots,
+        trigger='interval',
+        minutes=5,
+        replace_existing=True
+    )
+
     # SIM 卡月度排程 (每月 9 號 16:10 Asia/Tokyo)
     scheduler.add_job(
         id='update_simcard_status_job',

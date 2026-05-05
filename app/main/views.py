@@ -453,6 +453,35 @@ def multi_site_monitoring():
 
     return render_template('monitoring_system.html', items=sites)
 
+# ========== GW Status Cache (Backend-Driven) ==========
+@main.route('/gw_status_cache')
+def gw_status_cache_all():
+    """回傳所有 Spot 的快取 GW 狀態（由後端排程更新）"""
+    from .gw_monitor import get_all_cached_status
+    results = get_all_cached_status()
+    return jsonify({'spots': results})
+
+
+@main.route('/gw_status_cache/<int:spot_id>')
+def gw_status_cache(spot_id):
+    """回傳單一 Spot 的快取 GW 狀態"""
+    from .gw_monitor import get_cached_status
+    data = get_cached_status(spot_id)
+
+    if data:
+        return jsonify(data)
+    return jsonify({'error': 'No cached data yet. Wait for scheduler or trigger manually.', 'spot_id': spot_id}), 404
+
+
+@main.route('/gw_status_refresh', methods=['POST'])
+@login_required
+def gw_status_refresh():
+    """手動觸發 GW 狀態檢查（管理員用）"""
+    from .gw_monitor import check_all_spots
+    check_all_spots()
+    return jsonify({'status': 'refresh_triggered'})
+
+
 # ========== Kanban Board ==========
 @main.route('/kanban')
 @login_required

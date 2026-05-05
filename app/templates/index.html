@@ -177,6 +177,73 @@
     }).addTo(map);
 
     var quickModeActive = false;
+    let quickModeInterval = null;
+
+    // ========== GW Status Cache (Backend-Driven) ==========
+    // 全域快取：由後端排程更新，前端透過 SSE 接收推送
+    var GW_STATUS_CACHE = {};  // { spot_id: { status_color, gateways: [...], checked_at } }
+
+    // 初始化：載入快取 + 啟動 SSE listener
+    (function initGWStatusCache() {
+        // 1. 先從後端取得現有快取
+        fetch('/gw_status_cache')
+            .then(r => r.json())
+            .then(data => {
+                if (data.spots) {
+                    data.spots.forEach(s => { GW_STATUS_CACHE[s.spot_id] = s; });
+                    console.log('[GWMonitor] Loaded cache for', Object.keys(GW_STATUS_CACHE).length, 'spots');
+                    // 載入完成後更新地圖 marker 顏色
+                    applyCachedStatusToMarkers();
+                }
+            })
+            .catch(err => console.error('[GWMonitor] Failed to load cache:', err));
+
+        // 2. 啟動 SSE listener (接收後端推送)
+        if (typeof EventSource !== 'undefined') {
+            var sse = new EventSource('/sse/gw_monitor');
+            sse.addEventListener('gw_monitor', function(event) {
+                try {
+                    var data = JSON.parse(event.data);
+                    if (data.spots) {
+                        // 更新全域快取
+                        data.spots.forEach(s => { GW_STATUS_CACHE[s.spot_id] = s; });
+                        console.log('[GWMonitor] SSE update:', data.spot_count, 'spots');
+                        // 即時更新地圖 marker 顏色
+                        applyCachedStatusToMarkers();
+                    }
+                } catch (e) {
+                    console.error('[GWMonitor] SSE parse error:', e);
+                }
+            });
+            sse.onerror = function(err) {
+                console.warn('[GWMonitor] SSE connection error (will auto-reconnect):', err);
+            };
+        }
+    })();
+
+    // 將快取狀態套用到地圖上的 marker
+    function applyCachedStatusToMarkers() {
+        markers.forEach(function(marker) {
+            var spotId = marker.spot ? marker.spot.id : null;
+            if (!spotId || !GW_STATUS_CACHE[spotId]) return;
+
+            var cached = GW_STATUS_CACHE[spotId];
+            var color = cached.status_color || 'blue';
+            let iconUrl = '';
+            switch (color) {
+                case 'red':    iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'; break;
+                case 'orange': iconUrl = 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'; break;
+                case 'yellow': iconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'; break;
+                default:       iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+            }
+            marker.setIcon(L.icon({ iconUrl, iconSize: [32, 32] }));
+        });
+    }
+
+    // 取得 Spot 的快取狀態（若無則回傳 null）
+    function getCachedSpotStatus(spotId) {
+        return GW_STATUS_CACHE[spotId] || null;
+    }
     var updateFrequency = 30;
     var updateInterval;
     var markers = [];
@@ -334,27 +401,81 @@
                 infoPanel.style.display = 'block';
                 infoPanel.spotId = spot.id;
 
-                // 建立 Spot 基本資訊 + GW 列表 (初始顯示查詢中)
-                spotDetails.innerHTML = `
-                    <h5>${spot.site_name}</h5>
-                    <p><strong>描述：</strong>${spot.description}</p>
-                    <p><strong>緯度：</strong>${spot.latitude}</p>
-                    <p><strong>經度：</strong>${spot.longitude}</p>
-                    <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
-                    <h6>GW 列表</h6>
-                    <ul id="gw-list">
-                        ${
-                            (spot.gw_list || []).map(gw => `
-                                <li data-gw="${gw}">
-                                    <div>${gw} (查詢中...)</div>
-                                    <ul class="device-list" style="margin-left: 20px;">
-                                        <li>Device 查詢中...</li>
-                                    </ul>
-                                </li>
-                            `).join('')
+                // 檢查是否有快取資料
+                var cached = getCachedSpotStatus(spot.id);
+
+                if (cached && cached.gateways) {
+                    // 有快取 → 直接顯示（不需 API 呼叫）
+                    var gwHtml = cached.gateways.map(function(gwData) {
+                        var statusText = '';
+                        if (gwData.error) {
+                            statusText = '<span style="color: orange;">● 查詢失敗</span>';
+                        } else if (gwData.gw_online || gwData.onlineStatus === 1) {
+                            statusText = '<span style="color: green;">● 上線</span>';
+                        } else if (gwData.gw_online === false || gwData.onlineStatus === 0) {
+                            statusText = '<span style="color: red;">● 下線</span>';
+                        } else {
+                            statusText = '<span style="color: gray;">● 狀態未知</span>';
                         }
-                    </ul>
-                `;
+
+                        var deviceHtml = '';
+                        if (gwData.devices && gwData.devices.length > 0) {
+                            deviceHtml = gwData.devices.map(function(d) {
+                                var dStatus = d.is_online || d.online_status === 1 ?
+                                    '<span style="color: green;">●</span>' :
+                                    '<span style="color: red;">●</span>';
+                                return `<li>${d.name} (${d.device_id}) ${dStatus}</li>`;
+                            }).join('');
+                        } else {
+                            deviceHtml = '<li>無 Device 資訊</li>';
+                        }
+
+                        return `
+                            <li data-gw="${gwData.pid || gwData.gw_uuid}">
+                                <div>${gwData.pid || gwData.gw_uuid} ${statusText}</div>
+                                <ul class="device-list" style="margin-left: 20px;">${deviceHtml}</ul>
+                            </li>`;
+                    }).join('');
+
+                    var checkedAt = cached.checked_at ? new Date(cached.checked_at).toLocaleString('zh-TW') : '未知';
+                    spotDetails.innerHTML = `
+                        <h5>${spot.site_name}</h5>
+                        <p><strong>描述：</strong>${spot.description}</p>
+                        <p><strong>緯度：</strong>${spot.latitude}</p>
+                        <p><strong>經度：</strong>${spot.longitude}</p>
+                        <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
+                        <p style="font-size: 12px; color: #888;">📡 最後更新：${checkedAt} (後端快取)</p>
+                        <h6>GW 列表 (${cached.gw_count} GW, ${cached.device_count} Device)</h6>
+                        <ul id="gw-list">${gwHtml}</ul>
+                    `;
+                } else {
+                    // 無快取 → 顯示查詢中，然後呼叫 API
+                    spotDetails.innerHTML = `
+                        <h5>${spot.site_name}</h5>
+                        <p><strong>描述：</strong>${spot.description}</p>
+                        <p><strong>緯度：</strong>${spot.latitude}</p>
+                        <p><strong>經度：</strong>${spot.longitude}</p>
+                        <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
+                        <h6>GW 列表</h6>
+                        <ul id="gw-list">
+                            ${
+                                (spot.gw_list || []).map(gw => `
+                                    <li data-gw="${gw}">
+                                        <div>${gw} (查詢中...)</div>
+                                        <ul class="device-list" style="margin-left: 20px;">
+                                            <li>Device 查詢中...</li>
+                                        </ul>
+                                    </li>
+                                `).join('')
+                            }
+                        </ul>
+                    `;
+
+                    // 逐一查詢每個 GW 狀態與 Device (詳細資訊面板)
+                    (spot.gw_list || []).forEach(function(gw) {
+                        fetchGWAndDevices(gw);
+                    });
+                }
 
                 {% if current_user.is_authenticated %}
                 // 設置按鈕的 spot id
@@ -362,11 +483,6 @@
                 document.getElementById('detail-button').setAttribute('data-spot-id', spot.id);
                 document.getElementById('delete-button').setAttribute('data-spot-id', spot.id);
                 {% endif %}
-
-                // 逐一查詢每個 GW 狀態與 Device (詳細資訊面板)
-                (spot.gw_list || []).forEach(function(gw) {
-                    fetchGWAndDevices(gw);
-                });
             });
 
             markers.push(marker);
