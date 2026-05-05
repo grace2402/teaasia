@@ -476,10 +476,31 @@ def gw_status_cache(spot_id):
 @main.route('/gw_status_refresh', methods=['POST'])
 @login_required
 def gw_status_refresh():
-    """手動觸發 GW 狀態檢查（管理員用）"""
-    from .gw_monitor import check_all_spots
-    check_all_spots()
-    return jsonify({'status': 'refresh_triggered'})
+    """手動觸發 GW 狀態檢查 — 可指定 spot_ids 或全量"""
+    from .gw_monitor import _do_check, get_redis_client
+
+    data = request.get_json(silent=True) or {}
+    spot_ids = data.get('spot_ids')  # list of int, or None for all
+
+    # 寫入 Redis：記錄前端回報的 visible spot IDs（供 scheduler 使用）
+    if spot_ids:
+        r = get_redis_client()
+        if r:
+            try:
+                r.setex(
+                    'gw_monitor:visible_spot_ids',
+                    120,  # TTL 2 分鐘，比心跳間隔長
+                    json.dumps(spot_ids),
+                )
+            except Exception as e:
+                current_app.logger.warning(f"[GWMonitor] Redis heartbeat write error: {e}")
+
+    if spot_ids:
+        _do_check(spot_ids=spot_ids)
+        return jsonify({'status': 'refresh_triggered', 'spots_checked': len(spot_ids)})
+    else:
+        _do_check()
+        return jsonify({'status': 'refresh_triggered'})
 
 
 # ========== Kanban Board ==========

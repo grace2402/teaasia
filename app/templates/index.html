@@ -73,38 +73,6 @@
         #client-filter-select {
             width: auto;
         }
-        /* 快速模式彈窗 */
-        .quick-mode-modal {
-            display: none;
-            position: fixed;
-            z-index: 1003;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 250px;
-            background: white;
-            padding: 20px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 5px;
-            text-align: center;
-        }
-        .quick-mode-modal h4 {
-            margin-bottom: 10px;
-        }
-        .quick-mode-modal input {
-            width: 60px;
-            text-align: center;
-        }
-        .quick-mode-modal .modal-buttons {
-            margin-top: 15px;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-        .quick-mode-modal .spot-count {
-            margin-top: 10px;
-            font-weight: bold;
-        }
 
         /* 讓按鈕不換行 */
         .button-container {
@@ -126,8 +94,6 @@
             {% endfor %}
         </select>
         <a href="{{ url_for('main.add_spot') }}" class="btn btn-primary">新增站點</a>
-        <a href="{{ url_for('main.gw_monitor') }}" class="btn btn-info">監控GW清單</a>
-        <button id="quick-mode-btn" class="btn btn-warning">快速模式</button>
     </div>
     {% endif %}
 
@@ -147,19 +113,6 @@
     </div>
 </div>
 
-<!-- 快速模式彈窗 -->
-<div id="quick-mode-modal" class="quick-mode-modal">
-    <button id="close-quick-mode-modal" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 19.2px; cursor: pointer;">&times;</button>
-    <h4>快速模式設定</h4>
-    <label>更新頻率：</label>
-    <input type="number" id="frequency-input" min="1" value="30"> 分鐘
-    <div class="spot-count">目前畫面內 Spot 數量：<span id="spot-count">0</span></div>
-    <div class="modal-buttons">
-        <button id="start-quick-mode" class="btn btn-success">啟動</button>
-        <button id="stop-quick-mode" class="btn btn-danger" style="display: none;">停止</button>
-    </div>
-</div>
-
 <script>
     // 從後端取得的 spots（每個 spot 物件應包含 client_id、gw_list 等屬性）
     var spots = {{ spots | tojson | safe }};
@@ -175,9 +128,6 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap 貢獻者'
     }).addTo(map);
-
-    var quickModeActive = false;
-    let quickModeInterval = null;
 
     // ========== GW Status Cache (Backend-Driven) ==========
     // 全域快取：由後端排程更新，前端透過 SSE 接收推送
@@ -244,8 +194,6 @@
     function getCachedSpotStatus(spotId) {
         return GW_STATUS_CACHE[spotId] || null;
     }
-    var updateFrequency = 30;
-    var updateInterval;
     var markers = [];
 
     var infoPanel = document.getElementById('info-panel');
@@ -256,16 +204,13 @@
         infoPanel.style.display = 'none';
     });
 
-    // 計算目前地圖範圍內的 Spot 數量，並更新畫面
+    // 計算目前地圖範圍內的 Spot（回傳 visible spots 陣列）
     function updateVisibleSpotCount() {
         var bounds = map.getBounds();
-        // 過濾掉經緯度無效的 Spot
-        var visibleSpots = spots.filter(spot => {
+        return spots.filter(spot => {
             if (spot.latitude == null || spot.longitude == null) return false;
             return bounds.contains([spot.latitude, spot.longitude]);
         });
-        document.getElementById('spot-count').innerText = visibleSpots.length;
-        return visibleSpots;
     }
 
     // ---------- 檢查整個 Spot 的所有 GW/Device 狀態，並根據結果回傳顏色 ----------
@@ -342,42 +287,6 @@
             return 'yellow';
         } else {
             return 'blue';
-        }
-    }
-
-    // ---------- 快速模式：定時更新所有 GW/Device 狀態 ----------
-    async function updateGwStatus() {
-        const visibleSpots = updateVisibleSpotCount();
-
-        for (const spot of visibleSpots) {
-            const marker = markers.find(m => m.spot.id === spot.id);
-            if (!marker) continue;
-
-            try {
-                const color = await checkSpotStatus(spot);
-                let iconUrl = '';
-                switch (color) {
-                    case 'red':
-                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/red-dot.png';
-                        break;
-                    case 'orange':
-                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png';
-                        break;
-                    case 'yellow':
-                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png';
-                        break;
-                    default: // 'blue'
-                        iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
-                }
-                marker.setIcon(L.icon({ iconUrl, iconSize: [32, 32] }));
-            } catch (err) {
-                console.error('updateGwStatus error:', err);
-                // 若意外錯誤 → 橙色
-                marker.setIcon(L.icon({
-                    iconUrl: 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png',
-                    iconSize: [32, 32]
-                }));
-            }
         }
     }
 
@@ -587,7 +496,74 @@
     displayMarkers(spots);
 
     // 地圖移動結束後，更新可視範圍內的 spot 數量
-    map.on('moveend', updateVisibleSpotCount);
+    // ---------- 自動偵測：地圖拖曳/縮放後，debounce 1秒才送 visible spots 給後端 ----------
+    var gwRefreshTimer = null;
+
+    function onMapMoved() {
+        updateVisibleSpotCount();
+        clearTimeout(gwRefreshTimer);
+        gwRefreshTimer = setTimeout(function() {
+            refreshGwStatus();
+        }, 1000);  // debounce 1 秒
+    }
+
+    async function refreshGwStatus() {
+        const visibleSpots = updateVisibleSpotCount();
+        const spotIds = visibleSpots.map(s => s.id);
+
+        if (spotIds.length === 0) {
+            console.log('[GWMonitor] No visible spots, skipping');
+            return;
+        }
+
+        try {
+            // POST 可見的 spot IDs 給後端，讓後端只查這些 + 寫 Redis 供 scheduler 使用
+            const res = await fetch('/gw_status_refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ spot_ids: spotIds }),
+            });
+
+            if (res.ok) {
+                console.log('[GWMonitor] Refreshed', spotIds.length, 'visible spots');
+            } else {
+                console.warn('[GWMonitor] Refresh failed:', res.status);
+            }
+        } catch (err) {
+            console.error('[GWMonitor] Error posting refresh request:', err);
+        }
+
+        // 結果由 SSE listener 自動更新 marker，這裡不需要手動更新
+    }
+
+    map.on('moveend', onMapMoved);
+    map.on('zoomend', onMapMoved);
+
+    // 視窗 resize 也觸發（debounce）
+    var resizeTimer = null;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            onMapMoved();
+        }, 500);
+    });
+
+    // ---------- 心跳：每30秒回報 visible spot IDs → Scheduler 只查這些 ----------
+    var heartbeatInterval = setInterval(function() {
+        const visibleSpots = updateVisibleSpotCount();
+        const spotIds = visibleSpots.map(s => s.id);
+
+        if (spotIds.length === 0) return;
+
+        fetch('/gw_status_refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ spot_ids: spotIds }),
+        }).catch(function() {}); // 失敗不影響，下次再試
+    }, 30000);  // 每30秒心跳一次
+
+    // 初始化：頁面載入後立即檢查一次
+    setTimeout(refreshGwStatus, 2000);
 
     // 客戶篩選功能：根據下拉選單進行前端過濾
     document.getElementById('client-filter-select').addEventListener('change', function() {
@@ -597,33 +573,6 @@
             return String(spot.client_id) === selectedClientId;
         });
         displayMarkers(filteredSpots);
-    });
-
-    // ---------- 快速模式控制 ----------
-    document.getElementById('quick-mode-btn').addEventListener('click', function() {
-        document.getElementById('quick-mode-modal').style.display = 'block';
-        updateVisibleSpotCount();
-    });
-    document.getElementById('close-quick-mode-modal').addEventListener('click', function() {
-        document.getElementById('quick-mode-modal').style.display = 'none';
-    });
-    document.getElementById('start-quick-mode').addEventListener('click', function() {
-        quickModeActive = true;
-        updateFrequency = parseInt(document.getElementById('frequency-input').value, 10);
-        document.getElementById('start-quick-mode').style.display = 'none';
-        document.getElementById('stop-quick-mode').style.display = 'inline-block';
-
-        updateInterval = setInterval(function() {
-            updateGwStatus();
-        }, updateFrequency * 60000);
-
-        document.getElementById('quick-mode-modal').style.display = 'none';
-    });
-    document.getElementById('stop-quick-mode').addEventListener('click', function() {
-        quickModeActive = false;
-        document.getElementById('start-quick-mode').style.display = 'inline-block';
-        document.getElementById('stop-quick-mode').style.display = 'none';
-        clearInterval(updateInterval);
     });
 
     // 根據 URL query parameter 中的 client_id 自動篩選與定位
