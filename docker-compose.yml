@@ -7,6 +7,9 @@ services:
       - FLASK_CONFIG=default
       - DB_HOST=teaasia-db
       - REDIS_HOST=teaasia-redis
+      - AWS_DEFAULT_REGION=ap-northeast-1
+      - AWS_ACCESS_KEY_ID=dummy_cognito_key
+      - AWS_SECRET_ACCESS_KEY=dummy_cognito_secret
     depends_on:
       teaasia-db:
         condition: service_healthy

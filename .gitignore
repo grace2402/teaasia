@@ -2,6 +2,7 @@
 myenv/
 .env
 instance/
+config.py
 
 # Python
 __pycache__/
