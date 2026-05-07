@@ -310,7 +310,7 @@
             })
             .catch(err => console.error('[GWMonitor] Failed to load cache:', err));
 
-        // 2. 每5秒輪詢一次最新狀態（比 SSE 更可靠）
+        // 2. 每10秒輪詢一次最新狀態（比 SSE 更可靠）
         setInterval(function() {
             fetch('/gw_status_cache')
                 .then(r => r.json())
@@ -604,7 +604,7 @@
     displayMarkers(spots);
 
     // 地圖移動結束後，更新可視範圍內的 spot 數量
-    // ---------- 自動偵測：地圖拖曳/縮放後，debounce 1秒才送 visible spots 給後端 ----------
+    // ---------- 自動偵測：地圖拖曳/縮放後，debounce 3秒才送 visible spots 給後端 ----------
     var gwRefreshTimer = null;
 
     function onMapMoved() {
@@ -612,7 +612,7 @@
         clearTimeout(gwRefreshTimer);
         gwRefreshTimer = setTimeout(function() {
             refreshGwStatus();
-        }, 1000);  // debounce 1 秒
+        }, 3000);  // debounce 3 秒（等滑鼠停止移動後）
     }
 
     async function refreshGwStatus() {
