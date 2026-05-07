@@ -316,13 +316,9 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.spots) {
-                        var oldCount = Object.keys(GW_STATUS_CACHE).length;
                         data.spots.forEach(s => { GW_STATUS_CACHE[s.spot_id] = s; });
-                        var newCount = Object.keys(GW_STATUS_CACHE).length;
-                        if (newCount > 0) {
-                            console.log('[GWMonitor] Poll update:', newCount, 'spots cached');
-                            applyCachedStatusToMarkers();
-                        }
+                        var updated = applyCachedStatusToMarkers();
+                        console.log('[GWMonitor] Poll update:', updated, 'visible markers updated');
                     }
                 })
                 .catch(function() {});
@@ -411,9 +407,15 @@
 
     // 將快取狀態套用到地圖上的 marker（含 tooltip 更新）
     function applyCachedStatusToMarkers() {
+        var bounds = map.getBounds();
+        var updatedCount = 0;
         markers.forEach(function(marker) {
             var spotId = marker.spot ? marker.spot.id : null;
             if (!spotId || !GW_STATUS_CACHE[spotId]) return;
+
+            // 只更新可見區域內的 marker
+            var latLng = marker.getLatLng();
+            if (!bounds.contains(latLng)) return;
 
             var cached = GW_STATUS_CACHE[spotId];
             var color = cached.status_color || 'blue';
@@ -425,12 +427,14 @@
                 default:       iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
             }
             marker.setIcon(L.icon({ iconUrl, iconSize: [32, 32] }));
+            updatedCount++;
 
             // 同步更新 tooltip 內容
             if (typeof marker.updateTooltip === 'function') {
                 marker.updateTooltip();
             }
         });
+        return updatedCount;
     }
 
     // 取得 Spot 的快取狀態（若無則回傳 null）
@@ -670,14 +674,17 @@
     refreshGwStatus();
 
     // 客戶篩選功能：根據下拉選單進行前端過濾
-    document.getElementById('client-filter-select').addEventListener('change', function() {
-        var selectedClientId = this.value;
-        var filteredSpots = spots.filter(function(spot) {
-            if (!selectedClientId) return true;
-            return String(spot.client_id) === selectedClientId;
+    var clientFilterSelect = document.getElementById('client-filter-select');
+    if (clientFilterSelect) {
+        clientFilterSelect.addEventListener('change', function() {
+            var selectedClientId = this.value;
+            var filteredSpots = spots.filter(function(spot) {
+                if (!selectedClientId) return true;
+                return String(spot.client_id) === selectedClientId;
+            });
+            displayMarkers(filteredSpots);
         });
-        displayMarkers(filteredSpots);
-    });
+    }
 
     // 根據 URL query parameter 中的 client_id 自動篩選與定位
     function getQueryParam(param) {
@@ -705,23 +712,27 @@
         }
 
         // 編輯按鈕事件：導向編輯頁面
-        document.getElementById('edit-button').addEventListener('click', function() {
-            var spotId = this.getAttribute('data-spot-id');
-            if (spotId) {
-                window.location.href = `/edit_spot/${spotId}`;
-            }
-        });
+        var editBtn = document.getElementById('edit-button');
+        if (editBtn) {
+            editBtn.addEventListener('click', function() {
+                var spotId = this.getAttribute('data-spot-id');
+                if (spotId) window.location.href = `/edit_spot/${spotId}`;
+            });
+        }
 
         // 「詳細資訊」按鈕事件：導向 /site_detail/<spot_id>
-        document.getElementById('detail-button').addEventListener('click', function() {
-            var spotId = this.getAttribute('data-spot-id');
-            if (spotId) {
-                window.location.href = `/site_detail/${spotId}`;
-            }
-        });
+        var detailBtn = document.getElementById('detail-button');
+        if (detailBtn) {
+            detailBtn.addEventListener('click', function() {
+                var spotId = this.getAttribute('data-spot-id');
+                if (spotId) window.location.href = `/site_detail/${spotId}`;
+            });
+        }
 
         // 刪除按鈕事件：發送 POST 請求刪除站點
-        document.getElementById('delete-button').addEventListener('click', function() {
+        var deleteBtn = document.getElementById('delete-button');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function() {
             var spotId = this.getAttribute('data-spot-id');
             if (spotId && confirm('您確定要刪除此站點嗎？')) {
                 fetch(`/delete_spot/${spotId}`, {
@@ -746,6 +757,7 @@
                 });
             }
         });
+        }
     });
 </script>
 <script src="{{ url_for('static', filename='js/monitoring-tooltip.js') }}"></script>
