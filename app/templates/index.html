@@ -18,44 +18,6 @@
             width: 100%;
             height: calc(100% - 50px);
         }
-        #info-panel {
-            position: absolute;
-            top: 0;
-            right: 0;
-            /* 將原本 25% 改成 35%，並增加 max-width */
-            width: 35%;
-            max-width: 450px;
-            height: 100%;
-            background-color: #f8f9fa;
-            overflow-y: auto;
-            border-left: 1px solid #ddd;
-            display: none;
-            z-index: 1002;
-            padding: 15px;
-            font-size: 19.2px;
-        }
-        #spot-details ul {
-            padding-left: 20px;
-            margin: 0;
-        }
-        #spot-details li {
-            margin-bottom: 5px;
-        }
-        #spot-details h6, #spot-details h5 {
-            font-size: 19.2px;
-            font-weight: bold;
-        }
-        #close-info-panel {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: transparent;
-            border: none;
-            font-size: 19.2px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 1003;
-        }
         .add-spot-container {
             position: absolute;
             top: 0;
@@ -78,6 +40,216 @@
         .button-container {
             white-space: nowrap;
         }
+
+        /* ===== GW Tooltip (Hover) ===== */
+        #gw-tooltip-container {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            display: none;
+        }
+
+        #gw-tooltip-container .gw-tooltip {
+            background: #1a2a3a;
+            color: #e0e6ed;
+            border: 1px solid #2a4a6a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            max-width: 320px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+
+        .gw-tooltip .tt-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #2a4a6a;
+            padding-bottom: 6px;
+        }
+
+        .gw-tooltip .tt-summary {
+            font-size: 12px;
+            color: #8899aa;
+            margin-bottom: 8px;
+        }
+
+        .gw-tooltip .tt-gw-item {
+            margin-bottom: 6px;
+        }
+
+        .gw-tooltip .tt-gw-name {
+            font-weight: 600;
+            color: #e0e6ed;
+        }
+
+        .gw-tooltip .tt-devices {
+            margin-left: 14px;
+            margin-top: 2px;
+            padding-left: 0;
+            list-style: none;
+        }
+
+        .gw-tooltip .tt-device-item {
+            font-size: 12px;
+            color: #8899aa;
+        }
+
+        .gw-tooltip .tt-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .gw-tooltip .tt-dot.green  { background: #4ade80; box-shadow: 0 0 4px #4ade80; }
+        .gw-tooltip .tt-dot.red    { background: #ef4444; box-shadow: 0 0 4px #ef4444; }
+        .gw-tooltip .tt-dot.yellow { background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }
+        .gw-tooltip .tt-dot.orange { background: #f97316; box-shadow: 0 0 4px #f97316; }
+        .gw-tooltip .tt-dot.gray   { background: #6b7280; }
+
+        .gw-tooltip .tt-loading {
+            color: #8899aa;
+            font-style: italic;
+        }
+
+        /* Click tooltip overlay */
+        .gw-tooltip-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: none;
+        }
+        .gw-tooltip-overlay.active { display: block; }
+
+        .click-gw-tooltip {
+            position: fixed;
+            z-index: 10001;
+            background: #1a2a3a;
+            color: #e0e6ed;
+            border: 1px solid #2a4a6a;
+            border-radius: 12px;
+            padding: 0;
+            width: 480px;
+            max-height: 500px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            display: none;
+            overflow: hidden;
+        }
+        .click-gw-tooltip.active { display: block; }
+
+        .click-gw-tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #0f1923;
+            border-bottom: 1px solid #2a4a6a;
+        }
+        .click-gw-tooltip-header h3 {
+            margin: 0;
+            font-size: 15px;
+            color: #00d4ff;
+        }
+        .click-gw-tooltip-close {
+            background: none;
+            border: none;
+            color: #8899aa;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .click-gw-tooltip-close:hover { color: #fff; }
+
+        .click-gw-tooltip-body {
+            padding: 12px 16px;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .gw-tooltip-summary {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a4a6a;
+        }
+        .gw-tooltip-summary-item {
+            text-align: center;
+        }
+        .gw-tooltip-summary-item .label {
+            font-size: 11px;
+            color: #8899aa;
+            margin-bottom: 2px;
+        }
+        .gw-tooltip-summary-item .value {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .gw-tooltip-gw {
+            margin-bottom: 8px;
+            border: 1px solid #2a4a6a;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .gw-tooltip-gw-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #0f1923;
+            cursor: pointer;
+        }
+        .gw-tooltip-gw-name {
+            font-weight: 600;
+            color: #e0e6ed;
+            font-size: 13px;
+        }
+        .gw-tooltip-gw-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .gw-tooltip-gw-status.green { background: #4ade80; box-shadow: 0 0 4px #4ade80; }
+        .gw-tooltip-gw-status.red { background: #ef4444; box-shadow: 0 0 4px #ef4444; }
+        .gw-tooltip-gw-status.yellow { background: #fbbf24; box-shadow: 0 0 4px #fbbf24; }
+        .gw-tooltip-gw-status.orange { background: #f97316; box-shadow: 0 0 4px #f97316; }
+        .gw-tooltip-gw-status.blue { background: #00d4ff; box-shadow: 0 0 4px #00d4ff; }
+        .gw-tooltip-gw-status.gray { background: #6b7280; }
+
+        .gw-tooltip-devices {
+            display: none;
+            padding: 8px 12px;
+            background: #152030;
+        }
+        .gw-tooltip-devices.expanded { display: block; }
+
+        .gw-tooltip-device {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 12px;
+            border-bottom: 1px solid #1a2a3a;
+        }
+        .gw-tooltip-device-name { color: #8899aa; }
+        .gw-tooltip-device-status { color: #e0e6ed; }
+
+        .gw-tooltip-loading, .gw-tooltip-error {
+            text-align: center;
+            padding: 20px;
+            color: #8899aa;
+        }
+        .gw-tooltip-cached {
+            font-size: 11px;
+            color: #667788;
+            margin-top: 8px;
+            text-align: right;
+        }
     </style>
 {% endblock %}
 
@@ -99,19 +271,10 @@
 
     <div id="map"></div>
 
-    <div id="info-panel">
-        <button id="close-info-panel">&times;</button>
-        <h4>Spot 詳細資訊</h4>
-        <div id="spot-details"></div>
-        {% if current_user.is_authenticated %}
-        <div class="button-container">
-            <button id="edit-button" class="btn btn-warning">編輯站點資訊</button>
-            <button id="detail-button" class="btn btn-info">詳細資訊</button>
-            <button id="delete-button" class="btn btn-danger">刪除站點</button>
-        </div>
-        {% endif %}
-    </div>
-</div>
+    
+
+<!-- GW Tooltip Container (custom floating tooltip) -->
+<div id="gw-tooltip-container"><div class="gw-tooltip"></div></div>
 
 <script>
     // 從後端取得的 spots（每個 spot 物件應包含 client_id、gw_list 等屬性）
@@ -130,10 +293,10 @@
     }).addTo(map);
 
     // ========== GW Status Cache (Backend-Driven) ==========
-    // 全域快取：由後端排程更新，前端透過 SSE 接收推送
+    // 全域快取：由後端排程更新，前端透過輪詢取得最新狀態
     var GW_STATUS_CACHE = {};  // { spot_id: { status_color, gateways: [...], checked_at } }
 
-    // 初始化：載入快取 + 啟動 SSE listener
+    // 初始化：載入快取 + 啟動輪詢
     (function initGWStatusCache() {
         // 1. 先從後端取得現有快取
         fetch('/gw_status_cache')
@@ -142,36 +305,111 @@
                 if (data.spots) {
                     data.spots.forEach(s => { GW_STATUS_CACHE[s.spot_id] = s; });
                     console.log('[GWMonitor] Loaded cache for', Object.keys(GW_STATUS_CACHE).length, 'spots');
-                    // 載入完成後更新地圖 marker 顏色
                     applyCachedStatusToMarkers();
                 }
             })
             .catch(err => console.error('[GWMonitor] Failed to load cache:', err));
 
-        // 2. 啟動 SSE listener (接收後端推送)
-        if (typeof EventSource !== 'undefined') {
-            var sse = new EventSource('/sse/gw_monitor');
-            sse.addEventListener('gw_monitor', function(event) {
-                try {
-                    var data = JSON.parse(event.data);
+        // 2. 每5秒輪詢一次最新狀態（比 SSE 更可靠）
+        setInterval(function() {
+            fetch('/gw_status_cache')
+                .then(r => r.json())
+                .then(data => {
                     if (data.spots) {
-                        // 更新全域快取
+                        var oldCount = Object.keys(GW_STATUS_CACHE).length;
                         data.spots.forEach(s => { GW_STATUS_CACHE[s.spot_id] = s; });
-                        console.log('[GWMonitor] SSE update:', data.spot_count, 'spots');
-                        // 即時更新地圖 marker 顏色
-                        applyCachedStatusToMarkers();
+                        var newCount = Object.keys(GW_STATUS_CACHE).length;
+                        if (newCount > 0) {
+                            console.log('[GWMonitor] Poll update:', newCount, 'spots cached');
+                            applyCachedStatusToMarkers();
+                        }
                     }
-                } catch (e) {
-                    console.error('[GWMonitor] SSE parse error:', e);
-                }
-            });
-            sse.onerror = function(err) {
-                console.warn('[GWMonitor] SSE connection error (will auto-reconnect):', err);
-            };
-        }
+                })
+                .catch(function() {});
+        }, 5000);
     })();
 
-    // 將快取狀態套用到地圖上的 marker
+    // ========== GW Tooltip (Hover) ==========
+    // 建立 tooltip HTML 內容（使用快取或即時查詢）
+    function buildTooltipContent(spot) {
+        var cached = getCachedSpotStatus(spot.id);
+
+        if (!cached || !cached.gateways || cached.gateways.length === 0) {
+            return `<div class="tt-title">${spot.site_name}</div>
+                <div class="tt-summary">${spot.description || ''}</div>
+                <div class="tt-loading">載入中...</div>`;
+        }
+
+        var gwCount = cached.gateways.length;
+        var devCount = 0;
+        var onlineGw = 0, offlineGw = 0, errorGw = 0;
+        var onlineDev = 0, offlineDev = 0;
+
+        var gwHtml = cached.gateways.map(function(gwData) {
+            var dotClass = 'gray';
+            if (gwData.error) {
+                dotClass = 'orange'; errorGw++;
+            } else if (gwData.gw_online || gwData.onlineStatus === 1) {
+                dotClass = 'green'; onlineGw++;
+            } else if (gwData.gw_online === false || gwData.onlineStatus === 0) {
+                dotClass = 'red'; offlineGw++;
+            }
+
+            var deviceHtml = '';
+            if (gwData.devices && gwData.devices.length > 0) {
+                devCount += gwData.devices.length;
+                deviceHtml = gwData.devices.map(function(d) {
+                    var dOnline = d.is_online || d.online_status === 1;
+                    var dDot = dOnline ? 'green' : 'red';
+                    if (dOnline) onlineDev++; else offlineDev++;
+                    return `<li class="tt-device-item"><span class="tt-dot ${dDot}"></span>${d.name} (${d.device_id || d.model || ''})</li>`;
+                }).join('');
+            } else {
+                deviceHtml = '<li class="tt-device-item" style="color:#667;">無 Device 資訊</li>';
+            }
+
+            var gwLabel = gwData.pid || gwData.gw_uuid || 'Unknown';
+            return `<div class="tt-gw-item">
+                <span class="tt-dot ${dotClass}"></span>
+                <span class="tt-gw-name">${gwLabel}</span>
+                <ul class="tt-devices">${deviceHtml}</ul>
+            </div>`;
+        }).join('');
+
+        var checkedAt = cached.checked_at ? new Date(cached.checked_at).toLocaleString('zh-TW') : '未知';
+        var summaryColor = cached.status_color || 'blue';
+        var summaryDotClass = summaryColor === 'blue' ? 'green' : summaryColor;
+
+        return `<div class="tt-title">${spot.site_name}</div>
+            <div class="tt-summary"><span class="tt-dot ${summaryDotClass}"></span>${gwCount} GW, ${devCount} Device | 更新: ${checkedAt}</div>
+            ${gwHtml}`;
+    }
+
+    // 定位 tooltip 到 marker 上方
+    function positionTooltip(x, y) {
+        var container = document.getElementById('gw-tooltip-container');
+        var inner = container.querySelector('.gw-tooltip');
+        if (!inner) return;
+
+        // 先顯示以取得尺寸
+        container.style.display = 'block';
+        var tw = inner.offsetWidth || 280;
+        var th = inner.offsetHeight || 100;
+
+        // 定位在 marker 上方，居中對齊
+        var left = x - tw / 2;
+        var top = y - th - 20;
+
+        // 邊界檢查：不超出視窗
+        if (left < 10) left = 10;
+        if (left + tw > window.innerWidth - 10) left = window.innerWidth - tw - 10;
+        if (top < 10) top = y + 20;  // 如果上方空間不足，顯示在下方
+
+        container.style.left = left + 'px';
+        container.style.top = top + 'px';
+    }
+
+    // 將快取狀態套用到地圖上的 marker（含 tooltip 更新）
     function applyCachedStatusToMarkers() {
         markers.forEach(function(marker) {
             var spotId = marker.spot ? marker.spot.id : null;
@@ -187,6 +425,11 @@
                 default:       iconUrl = 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
             }
             marker.setIcon(L.icon({ iconUrl, iconSize: [32, 32] }));
+
+            // 同步更新 tooltip 內容
+            if (typeof marker.updateTooltip === 'function') {
+                marker.updateTooltip();
+            }
         });
     }
 
@@ -196,13 +439,6 @@
     }
     var markers = [];
 
-    var infoPanel = document.getElementById('info-panel');
-    var spotDetails = document.getElementById('spot-details');
-    var closeInfoPanel = document.getElementById('close-info-panel');
-
-    closeInfoPanel.addEventListener('click', function() {
-        infoPanel.style.display = 'none';
-    });
 
     // 計算目前地圖範圍內的 Spot（回傳 visible spots 陣列）
     function updateVisibleSpotCount() {
@@ -305,191 +541,59 @@
             var marker = L.marker([spot.latitude, spot.longitude]).addTo(map);
             marker.spot = spot;
 
-            // 點擊 Marker → 顯示 infoPanel
-            marker.on('click', function() {
-                infoPanel.style.display = 'block';
-                infoPanel.spotId = spot.id;
+            // ── Tooltip: hover 顯示 GW + Device 狀態 (custom floating div) ──
+            var tooltipContainer = document.getElementById('gw-tooltip-container');
+            var tooltipInner = tooltipContainer.querySelector('.gw-tooltip');
 
-                // 檢查是否有快取資料
+            marker.on('mouseover', function(e) {
+                // 若無快取 → 觸發該站點的 GW 狀態刷新
                 var cached = getCachedSpotStatus(spot.id);
-
-                if (cached && cached.gateways) {
-                    // 有快取 → 直接顯示（不需 API 呼叫）
-                    var gwHtml = cached.gateways.map(function(gwData) {
-                        var statusText = '';
-                        if (gwData.error) {
-                            statusText = '<span style="color: orange;">● 查詢失敗</span>';
-                        } else if (gwData.gw_online || gwData.onlineStatus === 1) {
-                            statusText = '<span style="color: green;">● 上線</span>';
-                        } else if (gwData.gw_online === false || gwData.onlineStatus === 0) {
-                            statusText = '<span style="color: red;">● 下線</span>';
-                        } else {
-                            statusText = '<span style="color: gray;">● 狀態未知</span>';
+                if (!cached || !cached.gateways || cached.gateways.length === 0) {
+                    fetch('/gw_status_refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ spot_ids: [spot.id] })
+                    }).then(function(res) {
+                        if (res.ok) {
+                            console.log('[GWTooltip] Refreshed spot', spot.id);
+                            // 刷新後重新顯示 tooltip
+                            setTimeout(function() {
+                                tooltipInner.innerHTML = buildTooltipContent(spot);
+                            }, 500);
                         }
-
-                        var deviceHtml = '';
-                        if (gwData.devices && gwData.devices.length > 0) {
-                            deviceHtml = gwData.devices.map(function(d) {
-                                var dStatus = d.is_online || d.online_status === 1 ?
-                                    '<span style="color: green;">●</span>' :
-                                    '<span style="color: red;">●</span>';
-                                return `<li>${d.name} (${d.device_id}) ${dStatus}</li>`;
-                            }).join('');
-                        } else {
-                            deviceHtml = '<li>無 Device 資訊</li>';
-                        }
-
-                        return `
-                            <li data-gw="${gwData.pid || gwData.gw_uuid}">
-                                <div>${gwData.pid || gwData.gw_uuid} ${statusText}</div>
-                                <ul class="device-list" style="margin-left: 20px;">${deviceHtml}</ul>
-                            </li>`;
-                    }).join('');
-
-                    var checkedAt = cached.checked_at ? new Date(cached.checked_at).toLocaleString('zh-TW') : '未知';
-                    spotDetails.innerHTML = `
-                        <h5>${spot.site_name}</h5>
-                        <p><strong>描述：</strong>${spot.description}</p>
-                        <p><strong>緯度：</strong>${spot.latitude}</p>
-                        <p><strong>經度：</strong>${spot.longitude}</p>
-                        <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
-                        <p style="font-size: 12px; color: #888;">📡 最後更新：${checkedAt} (後端快取)</p>
-                        <h6>GW 列表 (${cached.gw_count} GW, ${cached.device_count} Device)</h6>
-                        <ul id="gw-list">${gwHtml}</ul>
-                    `;
-                } else {
-                    // 無快取 → 顯示查詢中，然後呼叫 API
-                    spotDetails.innerHTML = `
-                        <h5>${spot.site_name}</h5>
-                        <p><strong>描述：</strong>${spot.description}</p>
-                        <p><strong>緯度：</strong>${spot.latitude}</p>
-                        <p><strong>經度：</strong>${spot.longitude}</p>
-                        <p><strong>專案代碼：</strong>${spot.project_code || '無'}</p>
-                        <h6>GW 列表</h6>
-                        <ul id="gw-list">
-                            ${
-                                (spot.gw_list || []).map(gw => `
-                                    <li data-gw="${gw}">
-                                        <div>${gw} (查詢中...)</div>
-                                        <ul class="device-list" style="margin-left: 20px;">
-                                            <li>Device 查詢中...</li>
-                                        </ul>
-                                    </li>
-                                `).join('')
-                            }
-                        </ul>
-                    `;
-
-                    // 逐一查詢每個 GW 狀態與 Device (詳細資訊面板)
-                    (spot.gw_list || []).forEach(function(gw) {
-                        fetchGWAndDevices(gw);
-                    });
+                    }).catch(function() {});
                 }
 
-                {% if current_user.is_authenticated %}
-                // 設置按鈕的 spot id
-                document.getElementById('edit-button').setAttribute('data-spot-id', spot.id);
-                document.getElementById('detail-button').setAttribute('data-spot-id', spot.id);
-                document.getElementById('delete-button').setAttribute('data-spot-id', spot.id);
-                {% endif %}
+                // 顯示 tooltip
+                tooltipInner.innerHTML = buildTooltipContent(spot);
+                tooltipContainer.style.display = 'block';
+
+                // 定位：使用 marker 的螢幕座標
+                var point = map.latLngToContainerPoint(marker.getLatLng());
+                positionTooltip(point.x, point.y);
+            });
+
+            marker.on('mouseout', function() {
+                tooltipContainer.style.display = 'none';
+            });
+
+            // 當 SSE 推送新資料時，更新 tooltip 內容
+            marker.updateTooltip = function() {
+                if (tooltipContainer.style.display === 'block') {
+                    tooltipInner.innerHTML = buildTooltipContent(spot);
+                }
+            };
+
+            // 點擊 Marker → 顯示 GW Tooltip (從 Redis cache + auto-refresh)
+            marker.on('click', function() {
+                if (typeof window.showGwTooltip === 'function') {
+                    var name = spot.site_name || '案場';
+                    window.showGwTooltip(spot.id, name);
+                }
             });
 
             markers.push(marker);
         });
-    }
-
-    // ---------- 查詢單一 GW 狀態後，再查 Device 清單 (詳細資訊面板用) ----------
-    function fetchGWAndDevices(gw) {
-        // 1. 先查 GW 狀態
-        fetch(`/get_gw_status/${gw}`)
-            .then(response => {
-                if (!response.ok) throw new Error('GW fetch failed');
-                return response.json();
-            })
-            .then(data => {
-                // 2. 更新該 GW 狀態 (上線/下線/未知)
-                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
-                if (!listItem) throw new Error('Cannot find listItem for GW=' + gw);
-
-                var gwData = data.data && data.data[0];
-                if (!gwData) throw new Error('No GW data');
-
-                let statusText = '';
-                if (gwData.onlineStatus === 1) {
-                    statusText = '<span style="color: green;">● 上線</span>';
-                } else if (gwData.onlineStatus === 0) {
-                    statusText = '<span style="color: red;">● 下線</span>';
-                } else {
-                    statusText = '<span style="color: gray;">● 狀態未知</span>';
-                }
-                // 更新顯示「GW + 狀態」
-                listItem.querySelector('div').innerHTML = `${gw} ${statusText}`;
-
-                // 檢查是否有 uuid
-                if (!gwData.uuid) {
-                    let deviceListElement = listItem.querySelector('.device-list');
-                    if (deviceListElement) {
-                        deviceListElement.innerHTML = '<li>無法查詢 Device（無 UUID）</li>';
-                    }
-                    return Promise.reject(new Error('No gateway UUID'));
-                }
-                return gwData.uuid;
-            })
-            .then(gatewayUuid => {
-                return fetch(`/get_gateway_devices/${gatewayUuid}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error('Device fetch failed');
-                        return response.json();
-                    });
-            })
-            .then(deviceData => {
-                if (!deviceData) return;
-                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
-                if (!listItem) return;
-                var deviceListElement = listItem.querySelector('.device-list');
-                if (!deviceListElement) return;
-
-                deviceListElement.innerHTML = ''; // 清除「Device 查詢中...」
-
-                if (deviceData.data && deviceData.data.length > 0) {
-                    deviceData.data.forEach(device => {
-                        let deviceStatus = '';
-                        if (device.onlineStatus === 1) {
-                            deviceStatus = '<span style="color: green;">● 上線</span>';
-                        } else if (device.onlineStatus === 0) {
-                            deviceStatus = '<span style="color: red;">● 下線</span>';
-                        } else {
-                            deviceStatus = '<span style="color: gray;">● 狀態未知</span>';
-                        }
-                        let li = document.createElement('li');
-                        li.innerHTML = `${device.name} (${device.model}) ${deviceStatus}`;
-                        deviceListElement.appendChild(li);
-                    });
-                } else {
-                    deviceListElement.innerHTML = '<li>無 Device 資訊</li>';
-                }
-            })
-            .catch(error => {
-                console.error('Error in GW/Device fetch:', error);
-                var listItem = document.querySelector(`#gw-list li[data-gw="${gw}"]`);
-                if (!listItem) return;
-                var deviceListElement = listItem.querySelector('.device-list');
-                if (!deviceListElement) return;
-                if (
-                    error.message.includes('GW fetch failed') ||
-                    error.message.includes('No GW data') ||
-                    error.message.includes('Cannot find listItem') ||
-                    error.message.includes('No gateway UUID')
-                ) {
-                    listItem.querySelector('div').innerHTML = `${gw} <span style="color: gray;">● 狀態未知</span>`;
-                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
-                } else if (error.message.includes('Device fetch failed')) {
-                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
-                } else {
-                    listItem.querySelector('div').innerHTML = `${gw} <span style="color: gray;">● 狀態未知</span>`;
-                    deviceListElement.innerHTML = '<li>查詢失敗</li>';
-                }
-            });
     }
 
     // ---------- 初始化：一開始顯示全部 spots ----------
@@ -562,8 +666,8 @@
         }).catch(function() {}); // 失敗不影響，下次再試
     }, 30000);  // 每30秒心跳一次
 
-    // 初始化：頁面載入後立即檢查一次
-    setTimeout(refreshGwStatus, 2000);
+    // 初始化：頁面載入後立即刷新可視區域（不等延遲）
+    refreshGwStatus();
 
     // 客戶篩選功能：根據下拉選單進行前端過濾
     document.getElementById('client-filter-select').addEventListener('change', function() {
@@ -644,5 +748,6 @@
         });
     });
 </script>
+<script src="{{ url_for('static', filename='js/monitoring-tooltip.js') }}"></script>
 
 {% endblock %}

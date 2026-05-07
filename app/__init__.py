@@ -365,6 +365,8 @@ def create_app(config_name):
     # 藍圖
     from .main import main as main_bp
     app.register_blueprint(main_bp)
+    from .main.views import gw_status_refresh
+    csrf.exempt(gw_status_refresh)
     from .auth import auth as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
     from .admin import admin as admin_bp
@@ -373,7 +375,8 @@ def create_app(config_name):
     app.register_blueprint(taipower_bp, url_prefix='/taipowermeters')
     app.extensions["confluence"] = confluence
     
-    # SSE blueprint
+    # SSE blueprint with Redis backend
+    app.config['SSE_REDIS_URL'] = app.config.get('REDIS_URL', 'redis://localhost:6379')
     app.register_blueprint(sse, url_prefix='/sse')
     # Notify SSE blueprint
     from .notifysse import notifysse as notifysse_bp

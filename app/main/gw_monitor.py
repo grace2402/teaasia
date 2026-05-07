@@ -49,7 +49,7 @@ def _do_check(spot_ids=None):
         current_app.logger.error("[GWMonitor] 無法取得 JWT token，跳過檢查")
         return []
 
-    checker = GWStatusChecker(token=token)
+    checker = GWStatusChecker(token=token, max_workers=10)
     r = get_redis_client()
 
     # 決定要查哪些 Spot
@@ -66,41 +66,35 @@ def _do_check(spot_ids=None):
     start_time = time.time()
 
     for spot in spots:
-        pids = spot.gw_list if isinstance(spot.gw_list, list) else (
-            [p.strip() for p in spot.gw_list.split(',') if p.strip()]
-        )
+        raw = spot.gw_list
+        if isinstance(raw, list):
+            pids = [p.strip() for p in raw if p and p.strip()]
+        elif raw:
+            pids = [p.strip() for p in str(raw).split(',') if p.strip()]
+        else:
+            pids = []
 
         if not pids:
             continue
 
-        # 檢查這個 Spot 的所有 GW
-        spot_results = []
-        worst_color = 'blue'  # 預設全部正常
+        # 平行檢查這個 Spot 的所有 GW（ThreadPoolExecutor）
+        spot_results_raw = checker.check_pids(pids, include_devices=True, parallel=True)
+        spot_results = [r.to_dict() for r in spot_results_raw]
 
-        for pid in pids:
-            try:
-                result = checker.check_pid(pid)
-                spot_results.append(result.to_dict())
+        # 取最嚴重的顏色 (orange > red > yellow > blue)
+        worst_color = 'blue'
+        color_priority = {'orange': 0, 'red': 1, 'yellow': 2, 'blue': 3}
+        for sr in spot_results:
+            c = sr.get('status_color', 'blue')
+            if color_priority.get(c, 3) < color_priority.get(worst_color, 3):
+                worst_color = c
 
-                # 取最嚴重的顏色
-                color = result.status_color
-                if color == 'orange':
-                    worst_color = 'orange'
-                elif color == 'red' and worst_color not in ('orange',):
-                    worst_color = 'red'
-                elif color == 'yellow' and worst_color not in ('orange', 'red'):
-                    worst_color = 'yellow'
-
-            except Exception as e:
-                current_app.logger.error(
-                    f"[GWMonitor] Spot={spot.id} PID={pid} 檢查失敗: {e}"
+        # 記錄有錯誤的 PID（平行化後錯誤已包在 result 中）
+        for sr in spot_results:
+            if sr.get('error'):
+                current_app.logger.warning(
+                    f"[GWMonitor] Spot={spot.id} PID={sr['pid']} 檢查異常: {sr['error']}"
                 )
-                spot_results.append({
-                    'pid': pid,
-                    'error': str(e),
-                    'status_color': 'orange',
-                })
-                worst_color = 'orange'
 
         # 組裝這個 Spot 的完整結果
         spot_data = {
@@ -130,7 +124,7 @@ def _do_check(spot_ids=None):
 
     elapsed = time.time() - start_time
 
-    # 透過 SSE 推送給所有連線中的前端 (若 Redis/SSE 不可用則跳過)
+    # 透過 SSE 推送給所有連線中的前端（輕量版：只推 spot_id + status_color）
     try:
         sse.publish({
             'type': 'gw_status_update',
@@ -138,6 +132,14 @@ def _do_check(spot_ids=None):
             'elapsed_seconds': round(elapsed, 1),
             'spot_count': len(all_results),
             'spots': all_results,
+        }, type='gw_monitor')
+        # 輕量版：只推顏色，前端用來更新卡片上的小圓點
+        sse.publish({
+            'type': 'gw_status_light',
+            'updates': [
+                {'spot_id': sr['spot_id'], 'status_color': sr['status_color']}
+                for sr in all_results
+            ],
         }, type='gw_monitor')
     except Exception as e:
         current_app.logger.warning(f"[GWMonitor] SSE publish failed (non-fatal): {e}")

@@ -16,7 +16,7 @@ from app.admin.forms import (
     RMARecordForm, ClientForm, ContractForm
 )
 from flask_sse import sse
-import logging, requests
+import logging, requests, json, time
 import config
 from webhook import send_message_to_google_chat
 import io
@@ -434,6 +434,8 @@ def multi_site_monitoring():
             'id': f'camp-{spot.id}',
             'name': spot.site_name or f'案場 {spot.id}',
             'pcs_uuid': pcs_uuid_list,
+            'spot_id': spot.id,
+            'gw_list': spot.gw_list if isinstance(spot.gw_list, list) else (spot.gw_list.split(',') if spot.gw_list else []),
             'soc': soc,
             'soh': soh,
             'temperature': temperature,
@@ -474,10 +476,10 @@ def gw_status_cache(spot_id):
 
 
 @main.route('/gw_status_refresh', methods=['POST'])
-@login_required
 def gw_status_refresh():
-    """手動觸發 GW 狀態檢查 — 可指定 spot_ids 或全量"""
+    """觸發 GW 狀態檢查 — 背景執行，立即回傳，結果由 SSE 推送"""
     from .gw_monitor import _do_check, get_redis_client
+    from threading import Thread
 
     data = request.get_json(silent=True) or {}
     spot_ids = data.get('spot_ids')  # list of int, or None for all
@@ -495,12 +497,14 @@ def gw_status_refresh():
             except Exception as e:
                 current_app.logger.warning(f"[GWMonitor] Redis heartbeat write error: {e}")
 
-    if spot_ids:
-        _do_check(spot_ids=spot_ids)
-        return jsonify({'status': 'refresh_triggered', 'spots_checked': len(spot_ids)})
-    else:
-        _do_check()
-        return jsonify({'status': 'refresh_triggered'})
+    # 同步執行 _do_check（前端等待 5-10 秒可接受）
+    try:
+        results = _do_check(spot_ids=spot_ids)
+        current_app.logger.info(f"[GWMonitor] Sync check completed for {len(results)} spots")
+    except Exception as e:
+        current_app.logger.warning(f"[GWMonitor] Sync check failed: {e}")
+
+    return jsonify({'status': 'refresh_triggered', 'spots_queued': len(spot_ids) if spot_ids else 'all'})
 
 
 # ========== Kanban Board ==========
