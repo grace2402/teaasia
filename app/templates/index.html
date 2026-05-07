@@ -295,6 +295,7 @@
     // ========== GW Status Cache (Backend-Driven) ==========
     // 全域快取：由後端排程更新，前端透過輪詢取得最新狀態
     var GW_STATUS_CACHE = {};  // { spot_id: { status_color, gateways: [...], checked_at } }
+    var currentHoverMarker = null;  // 追蹤當前 hover 的 marker，防止 race condition
 
     // 初始化：載入快取 + 啟動輪詢
     (function initGWStatusCache() {
@@ -334,6 +335,13 @@
             return `<div class="tt-title">${spot.site_name}</div>
                 <div class="tt-summary">${spot.description || ''}</div>
                 <div class="tt-loading">載入中...</div>`;
+        }
+
+        // 安全驗證：確保 cache 中的 spot_id 匹配（防止 race condition）
+        if (cached.spot_id && cached.spot_id !== spot.id) {
+            console.warn('[GWMonitor] Cache mismatch! Expected spot', spot.id, 'got', cached.spot_id);
+            return `<div class="tt-title">${spot.site_name}</div>
+                <div class="tt-summary">快取資料不匹配，重新載入中...</div>`;
         }
 
         var gwCount = cached.gateways.length;
@@ -548,42 +556,71 @@
             // ── Tooltip: hover 顯示 GW + Device 狀態 (custom floating div) ──
             var tooltipContainer = document.getElementById('gw-tooltip-container');
             var tooltipInner = tooltipContainer.querySelector('.gw-tooltip');
-
             marker.on('mouseover', function(e) {
-                // 若無快取 → 觸發該站點的 GW 狀態刷新
-                var cached = getCachedSpotStatus(spot.id);
-                if (!cached || !cached.gateways || cached.gateways.length === 0) {
-                    fetch('/gw_status_refresh', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ spot_ids: [spot.id] })
-                    }).then(function(res) {
-                        if (res.ok) {
-                            console.log('[GWTooltip] Refreshed spot', spot.id);
-                            // 刷新後重新顯示 tooltip
-                            setTimeout(function() {
-                                tooltipInner.innerHTML = buildTooltipContent(spot);
-                            }, 500);
-                        }
-                    }).catch(function() {});
+                // 防抖：清除之前的延遲更新，避免 race condition
+                if (typeof marker._tooltipTimer === 'number') {
+                    clearTimeout(marker._tooltipTimer);
                 }
 
-                // 顯示 tooltip
+                // 設定全域 hover 追蹤（用 spot.id 做雙重驗證）
+                currentHoverMarker = marker;
+
+                var cached = getCachedSpotStatus(spot.id);
+                var needsRefresh = !cached || !cached.gateways || cached.gateways.length === 0;
+
+                // 顯示 tooltip（先用現有快取或載入中）
                 tooltipInner.innerHTML = buildTooltipContent(spot);
                 tooltipContainer.style.display = 'block';
 
                 // 定位：使用 marker 的螢幕座標
                 var point = map.latLngToContainerPoint(marker.getLatLng());
                 positionTooltip(point.x, point.y);
+
+                if (needsRefresh) {
+                    // 觸發後端刷新，用 request ID + spot.id 雙重驗證
+                    var requestId = Date.now() + '-' + spot.id;
+                    marker._requestId = requestId;
+
+                    fetch('/gw_status_refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ spot_ids: [spot.id] })
+                    }).then(function(res) {
+                        if (res.ok) {
+                            // 延遲讀取刷新後的 cache，並驗證仍是同一個 marker 在 hover
+                            marker._tooltipTimer = setTimeout(function() {
+                                // 三重檢查：marker 引用 + request ID + spot.id 一致
+                                if (currentHoverMarker === marker &&
+                                    marker._requestId === requestId &&
+                                    currentHoverMarker.spot && currentHoverMarker.spot.id === spot.id) {
+                                    var updatedCache = getCachedSpotStatus(spot.id);
+                                    if (updatedCache && updatedCache.gateways && updatedCache.gateways.length > 0) {
+                                        tooltipInner.innerHTML = buildTooltipContent(spot);
+                                    }
+                                }
+                            }, 800);
+                        }
+                    }).catch(function() {});
+                }
             });
 
             marker.on('mouseout', function() {
-                tooltipContainer.style.display = 'none';
+                // 清除延遲更新 timer
+                if (typeof marker._tooltipTimer === 'number') {
+                    clearTimeout(marker._tooltipTimer);
+                    marker._tooltipTimer = null;
+                }
+                // 如果滑鼠離開的是當前 hover 的 marker，隱藏 tooltip
+                if (currentHoverMarker === marker) {
+                    currentHoverMarker = null;
+                    tooltipContainer.style.display = 'none';
+                }
             });
 
-            // 當 SSE 推送新資料時，更新 tooltip 內容
+            // 當 SSE/輪詢推送新資料時，更新 tooltip 內容
+            // 只有當這個 marker 是當前 hover 的目標時才更新（防止 applyCachedStatusToMarkers 遍歷時覆蓋）
             marker.updateTooltip = function() {
-                if (tooltipContainer.style.display === 'block') {
+                if (tooltipContainer.style.display === 'block' && currentHoverMarker === marker) {
                     tooltipInner.innerHTML = buildTooltipContent(spot);
                 }
             };
