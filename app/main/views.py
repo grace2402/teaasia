@@ -962,6 +962,8 @@ def edit_spot(spot_id):
 def delete_spot(spot_id):
     try:
         sp = Spot.query.get_or_404(spot_id)
+        # Delete related records before parent (foreign key constraints)
+        Contract.query.filter_by(spot_id=spot_id).delete()
         db.session.delete(sp)
         db.session.commit()
         flash('站點已成功刪除')

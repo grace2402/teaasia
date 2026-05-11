@@ -60,7 +60,34 @@
       })
       .then(renderTooltip)
       .catch(function () {
-        body.innerHTML = '<div class="gw-tooltip-error">⚠️ 暫無快取資料<br><small>後端排程尚未更新此案場</small></div>';
+        // Auto-refresh: trigger backend check for this spot, then poll until data arrives
+        body.innerHTML = '<div class="gw-tooltip-loading"><div class="spinner"></div><br>正在查詢設備狀態...</div>';
+
+        fetch('/gw_status_refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ spot_ids: [spotId] })
+        }).then(function (r) {
+          if (!r.ok) return;
+          // Poll for cache data every 1s, up to 30 attempts (30s timeout)
+          var polls = 0;
+          function poll() {
+            if (++polls > 30) {
+              body.innerHTML = '<div class="gw-tooltip-error">⚠️ 查詢超時<br><small>後端尚未回傳此案場資料</small></div>';
+              return;
+            }
+            fetch('/gw_status_cache/' + spotId).then(function (r) {
+              if (!r.ok || currentSpotId !== spotId) {
+                setTimeout(poll, 1000);
+                return;
+              }
+              r.json().then(renderTooltip);
+            }).catch(function () {
+              setTimeout(poll, 1000);
+            });
+          }
+          poll();
+        });
       });
   }
 
