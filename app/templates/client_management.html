@@ -1,0 +1,154 @@
+{% extends "base1.html" %}
+
+{% block title %}
+客戶管理
+{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>客戶管理</h2>
+    </div>
+
+    <!-- 篩選表單 -->
+    <form method="GET" action="{{ url_for('main.client_management') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="name_filter">客戶名稱</label>
+            <input type="text" class="form-control" id="name_filter" name="name_filter" value="{{ request.args.get('name_filter') or '' }}" placeholder="輸入客戶名稱">
+        </div>
+        <div class="filter-group">
+            <label for="contact_filter">聯絡人</label>
+            <input type="text" class="form-control" id="contact_filter" name="contact_filter" value="{{ request.args.get('contact_filter') or '' }}" placeholder="輸入聯絡人">
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.client_management') }}" class="btn btn-gradient-sm" style="background:#6c757d;">取消篩選</a>
+        </div>
+    </form>
+
+    <!-- 新增客戶按鈕 -->
+    <div class="action-bar">
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addClientModal">
+            新增客戶
+        </button>
+    </div>
+
+    <!-- 客戶列表表格 -->
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>客戶名稱</th>
+                    <th>網站URL</th>
+                    <th>聯絡人</th>
+                    <th>Email</th>
+                    <th>電話</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td>{{ client.id }}</td>
+                    <td>{{ client.name }}</td>
+                    <td>
+                        {% if client.website_url %}
+                            <a href="{{ client.website_url }}" target="_blank" style="color: var(--gradient-start) !important; font-size: 24.0px !important;">{{ client.website_url }}</a>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ client.contact_name or 'N/A' }}</td>
+                    <td>{{ client.contact_email or 'N/A' }}</td>
+                    <td>{{ client.contact_phone or 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('main.edit_client', client_id=client.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+                        <a href="{{ url_for('main.material_management', client_id=client.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:8px;">查看物料</a>
+                        <a href="{{ url_for('main.index') }}?client_id={{ client.id }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#28a745,#218838); margin-left:8px;">查看 Spot</a>
+                        <form method="POST" action="{{ url_for('main.delete_client', client_id=client.id) }}" style="display:inline; margin-left:8px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除這個客戶嗎？');">刪除</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center;">沒有符合的客戶</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分頁導航 -->
+    <div class="pagination-wrapper">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for('main.client_management', page=pagination.prev_num, name_filter=request.args.get('name_filter'), contact_filter=request.args.get('contact_filter')) }}">上一頁</a>
+        {% else %}
+        <span class="page-link disabled">上一頁</span>
+        {% endif %}
+        {% for page_num in pagination.iter_pages() %}
+        {% if page_num %}
+        <a class="page-link {% if page_num == pagination.page %}active{% endif %}" href="{{ url_for('main.client_management', page=page_num, name_filter=request.args.get('name_filter'), contact_filter=request.args.get('contact_filter')) }}">{{ page_num }}</a>
+        {% else %}
+        <span class="page-link disabled">...</span>
+        {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for('main.client_management', page=pagination.next_num, name_filter=request.args.get('name_filter'), contact_filter=request.args.get('contact_filter')) }}">下一頁</a>
+        {% else %}
+        <span class="page-link disabled">下一頁</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 新增客戶的 Modal -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addClientModalLabel">新增客戶</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('main.add_client') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="name">客戶名稱</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="website_url">網站URL</label>
+                        <input type="text" class="form-control" id="website_url" name="website_url" placeholder="https://">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_name">聯絡人</label>
+                        <input type="text" class="form-control" id="contact_name" name="contact_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_email">Email</label>
+                        <input type="email" class="form-control" id="contact_email" name="contact_email">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_phone">電話</label>
+                        <input type="text" class="form-control" id="contact_phone" name="contact_phone">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                    <button type="submit" class="btn-gradient">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

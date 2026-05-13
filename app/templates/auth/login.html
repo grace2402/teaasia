@@ -1,0 +1,21 @@
+<!-- app/templates/auth/login.html -->
+
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}ByTaiwan - Login{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>Login</h1>
+</div>
+<div class="row">
+<div class="col-xs-12 col-sm-6 col-md-6 col-lg-4 col-center-block">
+    {{ wtf.quick_form(form) }}
+    {{ form.hidden_tag() }}
+    <br>
+    <p>Forgot your password? <a href="{{ url_for('auth.password_reset_request') }}">Click here to reset it</a>.</p>
+    <p>New user? <a href="{{ url_for('auth.register') }}">Click here to register</a>.</p>
+</div>
+</div>
+{% endblock %}

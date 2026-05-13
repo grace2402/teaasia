@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}ByTaiwan - Story Detial{% endblock %}
+
+{% block head %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script type=text/javascript> var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }}; </script> 
+{{ super() }}
+<script type=text/javascript>
+  $(function() {
+    $("#hitBtn").click(function() {
+         $.ajax({
+            type: "GET",
+            url: $SCRIPT_ROOT + "/taiwan/hit_story/{{display_story.id}}",
+            contentType: "application/json; charset=utf-8",
+            success: function(data) {
+                $('#hitResult').text( data.value);
+            }
+        });     
+    });
+  });
+</script>
+{% endblock %}
+
+{% block page_content %}
+    <h2>Title : {{ display_story.title }}</h2>
+	<div class="center-block">    
+	    <div class="row">
+	        	    <p></p>
+					<p></p>	        		
+	        <div style='border-bottom:1px solid #ccc;'></div>
+	        	    <p></p>
+					<p></p>
+	        <div class="col-sm-12 col-md-12 col-lg-12">
+
+	            <img src="{{ url_for('static', filename='story/images/'+ display_story.imgurl) }}" class="img-responsive center-block" style="width:100%">
+	        	    <p></p>
+					<p></p>
+					
+	        </div>
+		</div>
+		<div class="row">
+	        <div class="col-sm-12 col-md-12 col-lg-12">
+					<SPAN STYLE="float:right">
+					    <p>
+				        <button type="button" id='hitBtn' name='hitBtn' class="btn btn-default btn-sm">
+				          <span class="glyphicon glyphicon-thumbs-up"></span> Like
+				        </button>
+					    </p>
+					</SPAN>
+					<SPAN STYLE="float:left">
+						<span class="glyphicon">&#xe125; :&nbsp</span><div id="hitResult" style="display: inline">{{display_story.hitnumber|string}}</div>
+					</SPAN> 
+					<DIV STYLE="clear:both"></DIV>
+     	            <p><h3>Location : {{ display_story.location }}</h3></p>
+			        <div class="description">
+		       				<p><h3>  {{ display_story.description }}</h3></p>
+		       		</div>
+		       		</br>
+		       		<div class="text-right">
+		       		<p><h3>Author : {{ display_story.author }} / {{ display_story.post_datetime.strftime('%Y-%m-%d %H:%M:%S') }}</h3></p>
+		        	</div>
+		        </div>
+	        </div>
+	    </div>
+    	<p></p>
+		<p></p>
+{% endblock %}
+

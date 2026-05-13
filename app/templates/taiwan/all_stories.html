@@ -1,0 +1,33 @@
+<!-- app/templates/product/all_products.html -->
+
+{% extends "base.html" %}
+
+{% block title %}ByTaiwan - All Story{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h2 class="shadow">Hello, {% if current_user.is_authenticated %}{{ current_user.username }}{% else %}Stranger{% endif %}!</h2>
+</div>
+
+
+    <div id="story-list" class="row">
+      {% for story in story_list.items %}
+          <div class="col-xs-12 col-sm-6 col-md-6 col-lg-3 product-summary">
+              <div class="well">
+                  <h3><a href="{{ url_for('taiwan.show_story', id=story.id ) }}">{{ story.title }}</a></h3>                  
+                  <a href="{{ url_for('taiwan.show_story', id=story.id ) }}">
+                      <img src ="{{ url_for('static', filename='story/images/'+ story.imgurl) }}" class="img-responsive center-block" style="width:100%">
+                  </a>
+                  </br>
+                  <p><div class="location">Location : {{ story.location }}</div></p>
+				  <p><div class="author">Author : {{ story.author }}</div></p>
+                  <p><div class="post_datetime">PostDate : {{ story.post_datetime.strftime('%Y-%m-%d') }}</div></p>
+              </div>
+          </div>
+      {% endfor %}
+    </div>
+    <div class="text-center">
+		{% if story_list.has_prev %}<a href="{{ url_for('taiwan.list_stories', page=story_list.prev_num) }}">&lt;&lt; Newer posts</a>{% else %}&lt;&lt; Pre Pages{% endif %} | 
+		{% if story_list.has_next %}<a href="{{ url_for('taiwan.list_stories', page=story_list.next_num) }}">Older posts &gt;&gt;</a>{% else %}Next Pages &gt;&gt;{% endif %}
+	</div>
+{% endblock %}

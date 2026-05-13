@@ -1,0 +1,72 @@
+{% extends "base1.html" %}
+
+{% block title %}
+站台列表
+{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>📋 站台列表</h2>
+    </div>
+
+    <p class="text-muted mb-3" style="font-size: 26.4px;">共 <strong>{{ clients|length }}</strong> 個站台</p>
+
+    <!-- 客戶管理按鈕 -->
+    <div class="action-bar">
+        <a href="{{ url_for('main.client_management') }}" class="btn btn-warning" style="border-radius: 10px; font-weight: 500; font-size: 24.0px; padding: 12px 24px;">
+            ⚙️ 客戶管理
+        </a>
+    </div>
+
+    {% if clients %}
+    <!-- 表格 -->
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>客戶名稱</th>
+                    <th>網站站台</th>
+                    <th>聯絡人</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <span style="font-weight: 600; color: #1a1a2e;">{{ client.name }}</span>
+                    </td>
+                    <td>
+                        <a href="{{ client.website_url }}" target="_blank" rel="noopener noreferrer"
+                           style="color: #667eea; text-decoration: none; font-weight: 500; word-break: break-all;">
+                            {{ client.website_url }}
+                            <span style="font-size: 21.6px; opacity: 0.7;">↗</span>
+                        </a>
+                    </td>
+                    <td>{{ client.contact_name or '-' }}</td>
+                    <td>
+                        <a href="{{ client.website_url }}" target="_blank" rel="noopener noreferrer"
+                           class="btn-gradient-sm">
+                            開啟
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-container">
+        <div class="alert alert-info border-0 shadow-sm" style="background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%); border-left: 4px solid #667eea;">
+            <p class="mb-2" style="font-weight: 500; color: #1a1a2e; font-size: 24.0px !important;">目前沒有設定網站 URL 的客戶。</p>
+            <p class="mb-0" style="font-size: 24.0px !important;">請到 <a href="{{ url_for('main.client_management') }}" style="font-weight: 600; color: #667eea;">客戶管理</a> 新增或編輯客戶的網站 URL。</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,19 @@
+SIM 卡狀態報表：
+【群組：1】
+  active : 0
+  suspend: 1
+  dead   : 1
+  總計金額: 200
+""
+【群組：3】
+  active : 1
+  suspend: 0
+  dead   : 0
+  總計金額: 400
+""
+【群組：2】
+  active : 0
+  suspend: 0
+  dead   : 1
+  總計金額: 0
+""

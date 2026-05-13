@@ -1,0 +1,651 @@
+{% extends "base1.html" %}
+
+{% block title %}JP 版物料管理總表{% endblock %}
+
+{% block page_content %}
+
+<style>
+    .editable {
+        cursor: pointer;
+    }
+    .editing {
+        background-color: #f8f9fa;
+    }
+
+    /* ===== 物料表格樣式 ===== */
+    .material-table-wrapper {
+        overflow-x: auto;
+        border-radius: var(--card-radius);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        background: white;
+        border: 1px solid #e0e5ef;
+    }
+
+    .material-table-wrapper table.table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0;
+    }
+
+    /* 欄位名稱 — 漸層背景 + 白色大字 */
+    .material-table-wrapper table.table thead th {
+        background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) !important;
+        color: white !important;
+        padding: 14px 12px !important;
+        font-weight: 600 !important;
+        font-size: 18px !important;
+        text-align: center;
+        white-space: nowrap;
+        border: none !important;
+        min-width: 100px;
+    }
+
+    /* 資料列 */
+    .material-table-wrapper table.table tbody td {
+        padding: 10px 12px !important;
+        border-bottom: 1px solid #eef1f7 !important;
+        vertical-align: middle !important;
+        font-size: 15px !important;
+    }
+
+    .material-table-wrapper table.table tbody tr:hover {
+        background-color: var(--hover-bg) !important;
+    }
+
+    /* select 下拉選單 */
+    .material-table-wrapper table.table .form-control-sm {
+        font-size: 14px !important;
+        padding: 5px 8px !important;
+        border-radius: 6px !important;
+        min-width: 90px;
+    }
+
+    /* 操作按鈕 */
+    .material-table-wrapper table.table .btn-sm {
+        font-size: 14px !important;
+        padding: 5px 12px !important;
+        border-radius: 6px !important;
+    }
+
+    /* 可換行的欄位 */
+    .wrap-column {
+        white-space: normal !important;
+        max-width: 180px !important;
+        min-width: 120px !important;
+    }
+    .modal {
+        z-index: 1050 !important;
+    }
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+
+    /* 物料版切換 tab 按鈕 */
+    .view-toggle .btn {
+        border: 1.5px solid #667eea;
+        color: #667eea;
+        background: transparent;
+        font-weight: 500;
+        min-width: 120px;
+        transition: all 0.2s ease;
+    }
+    .view-toggle .btn:hover {
+        background: rgba(102, 126, 234, 0.1);
+    }
+    .view-toggle .btn.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+</style>
+<div class="container-fluid mt-5">
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+
+    <div class="page-header-bar">
+        <h2>Nextdrive_KK 物料管理總表</h2>
+    </div>
+
+    <!-- 操作列 -->
+    <div class="action-bar">
+        <button class="btn btn-primary" data-toggle="modal" data-target="#addMaterialModalJP">
+            <span>＋</span> 新增物料
+        </button>
+        <button class="btn btn-success" data-toggle="modal" data-target="#importCsvModalJP">
+            <span>📁</span> CSV 匯入
+        </button>
+        <div class="view-toggle">
+            <a href="{{ url_for('main.material_management') }}" class="btn {% if request.endpoint == 'main.material_management' %}active{% endif %}">
+                Nextdrive
+            </a>
+            <a href="{{ url_for('main.material_jp_management') }}" class="btn {% if request.endpoint == 'main.material_jp_management' %}active{% endif %}">
+                Nextdrive_KK
+            </a>
+        </div>
+    </div>
+
+    <!-- 資料表格 -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Device Model</th>
+                    <th>PI/MAC Address</th>
+                    <th>P/N</th>
+                    <th>狀態</th>
+                    <th>保管人</th>
+                    <th>Remark</th>
+                    <th>SIM卡資訊</th>
+                    <th>NetSuite Dept</th>
+                    <th>EIS Program</th>
+                    <th>EG+ Account</th>
+                    <th>Location</th>
+                    <th>Firmware</th>
+                    <th>連網方式</th>
+                    <th>NOTE</th>
+                    <th>領料人</th>
+                    <th>領料單號</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr>
+                    <td>{{ material.id }}</td>
+                    
+                    <!-- Device Model（下拉式） -->
+                    <td>
+                        <select class="form-control device-model-select-jp" data-id="{{ material.id }}" style="width: auto;">
+                            <option value="" {% if not material.device_model %}selected{% endif %}>選擇 Device Model</option>
+                            <option value="Atto FAN w/ SIM" {% if material.device_model == 'Atto FAN w/ SIM' %}selected{% endif %}>Atto FAN w/ SIM</option>
+                            <option value="Atto" {% if material.device_model == 'Atto' %}selected{% endif %}>Atto</option>
+                            <option value="Atto FAN" {% if material.device_model == 'Atto FAN' %}selected{% endif %}>Atto FAN</option>
+                            <option value="Cube J" {% if material.device_model == 'Cube J' %}selected{% endif %}>Cube J</option>
+                            <option value="Cube FAN" {% if material.device_model == 'Cube FAN' %}selected{% endif %}>Cube FAN</option>
+                            <option value="其他(請在NOTE註明)" {% if material.device_model == '其他(請在NOTE註明)' %}selected{% endif %}>其他(請在NOTE註明)</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 其餘可編輯欄位（雙擊編輯） -->
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="pid">{{ material.pid }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="pn">{{ material.pn }}</td>
+                    
+                    <!-- 狀態（下拉式） -->
+                    <td>
+                        <select class="form-control status-select-jp" data-id="{{ material.id }}" style="width: auto;">
+                            <option value="" {% if not material.status %}selected{% endif %}>選擇狀態</option>
+                            <option value="使用中" {% if material.status == '使用中' %}selected{% endif %}>使用中</option>
+                            <option value="RMA" {% if material.status == 'RMA' %}selected{% endif %}>RMA</option>
+                            <option value="PJM 保管" {% if material.status == 'PJM 保管' %}selected{% endif %}>PJM 保管</option>
+                            <option value="FAE 保管" {% if material.status == 'FAE 保管' %}selected{% endif %}>FAE 保管</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 保管人（下拉式） -->
+                    <td>
+                        <select class="form-control keeper-select-jp" data-id="{{ material.id }}" style="width: auto;">
+                            <option value="" {% if not material.keeper %}selected{% endif %}>選擇保管人</option>
+                            <option value="Anita Chien" {% if material.keeper == 'Anita Chien' %}selected{% endif %}>Anita Chien</option>
+                            <option value="Sandy Du" {% if material.keeper == 'Sandy Du' %}selected{% endif %}>Sandy Du</option>
+                            <option value="Carryl Chan" {% if material.keeper == 'Carryl Chan' %}selected{% endif %}>Carryl Chan</option>
+                            <option value="Dexter Chen" {% if material.keeper == 'Dexter Chen' %}selected{% endif %}>Dexter Chen</option>
+                            <option value="Amos Zhang" {% if material.keeper == 'Amos Zhang' %}selected{% endif %}>Amos Zhang</option>
+                            <option value="Skuvy Liang" {% if material.keeper == 'Skuvy Liang' %}selected{% endif %}>Skuvy Liang</option>
+                            <option value="SCM" {% if material.keeper == 'SCM' %}selected{% endif %}>SCM</option>
+                            <option value="客戶案場" {% if material.keeper == '客戶案場' %}selected{% endif %}>客戶案場</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 其餘可編輯欄位（雙擊編輯） -->
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="remark">{{ material.remark }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="sim_info">{{ material.sim_info }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="netsuite_dept">{{ material.netsuite_dept }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="eis_program">{{ material.eis_program }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="eg_account">{{ material.eg_account }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="location">{{ material.location }}</td>
+                    
+                    <!-- Firmware（下拉式） -->
+                    <td>
+                        <select class="form-control firmware-select-jp" data-id="{{ material.id }}" style="width: auto;">
+                            <option value="" {% if not material.firmware %}selected{% endif %}>選擇 Firmware</option>
+                            <option value="Cube-PLUS" {% if material.firmware == 'Cube-PLUS' %}selected{% endif %}>Cube-PLUS</option>
+                            <option value="Cube-TPLUS" {% if material.firmware == 'Cube-TPLUS' %}selected{% endif %}>Cube-TPLUS</option>
+                            <option value="Cube-ETC" {% if material.firmware == 'Cube-ETC' %}selected{% endif %}>Cube-ETC</option>
+                            <option value="Atto-PLUS" {% if material.firmware == 'Atto-PLUS' %}selected{% endif %}>Atto-PLUS</option>
+                            <option value="Atto-TPLUS" {% if material.firmware == 'Atto-TPLUS' %}selected{% endif %}>Atto-TPLUS</option>
+                            <option value="Atto-ETC" {% if material.firmware == 'Atto-ETC' %}selected{% endif %}>Atto-ETC</option>
+                            <option value="Atto-THA" {% if material.firmware == 'Atto-THA' %}selected{% endif %}>Atto-THA</option>
+                            <option value="Atto-SC" {% if material.firmware == 'Atto-SC' %}selected{% endif %}>Atto-SC</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 連網方式（下拉式） -->
+                    <td>
+                        <select class="form-control connection-method-select-jp" data-id="{{ material.id }}" style="width: auto;">
+                            <option value="" {% if not material.connection_method %}selected{% endif %}>選擇連網方式</option>
+                            <option value="LTE" {% if material.connection_method == 'LTE' %}selected{% endif %}>LTE</option>
+                            <option value="WIFI" {% if material.connection_method == 'WIFI' %}selected{% endif %}>WIFI</option>
+                            <option value="ETH(DONGLE)" {% if material.connection_method == 'ETH(DONGLE)' %}selected{% endif %}>ETH(DONGLE)</option>
+                            <option value="ETH(原生)" {% if material.connection_method == 'ETH(原生)' %}selected{% endif %}>ETH(原生)</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 其餘可編輯欄位（雙擊編輯） -->
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="note">{{ material.note }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="pickup_person">{{ material.pickup_person }}</td>
+                    <td class="editable-jp" data-id="{{ material.id }}" data-field="pickup_order_number">{{ material.pickup_order_number }}</td>
+                    
+                    <!-- 刪除按鈕 -->
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-material-jp" data-id="{{ material.id }}">刪除</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- 分頁控制 -->
+    <div class="pagination-container" style="text-align: center;">
+        <ul class="pagination">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.material_jp_management', page=pagination.prev_num) }}">上一頁</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">上一頁</span>
+            </li>
+            {% endif %}
+            
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.material_jp_management', page=page_num) }}">{{ page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.material_jp_management', page=pagination.next_num) }}">下一頁</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">下一頁</span>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+</div>
+
+<!-- 新增物料 JP 的模態框 -->
+<div class="modal fade" id="addMaterialModalJP" tabindex="-1" role="dialog" aria-labelledby="addMaterialModalJPLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addMaterialModalJPLabel">新增 JP 版物料</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="關閉">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addMaterialFormJP">
+                    <div class="form-group">
+                        <label for="device_model_jp">Device Model</label>
+                        <select class="form-control" id="device_model_jp" name="device_model">
+                            <option value="">選擇 Device Model</option>
+                            <option value="Atto FAN w/ SIM">Atto FAN w/ SIM</option>
+                            <option value="Atto">Atto</option>
+                            <option value="Atto FAN">Atto FAN</option>
+                            <option value="Cube J">Cube J</option>
+                            <option value="Cube FAN">Cube FAN</option>
+                            <option value="其他(請在NOTE註明)">其他(請在NOTE註明)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pid_jp">PI/MAC Address</label>
+                        <input type="text" class="form-control" id="pid_jp" name="pid">
+                    </div>
+                    <div class="form-group">
+                        <label for="pn_jp">P/N</label>
+                        <input type="text" class="form-control" id="pn_jp" name="pn">
+                    </div>
+                    <div class="form-group">
+                        <label for="status_jp">狀態</label>
+                        <select class="form-control" id="status_jp" name="status">
+                            <option value="">選擇狀態</option>
+                            <option value="使用中">使用中</option>
+                            <option value="RMA">RMA</option>
+                            <option value="PJM 保管">PJM 保管</option>
+                            <option value="FAE 保管">FAE 保管</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="keeper_jp">保管人</label>
+                        <select class="form-control" id="keeper_jp" name="keeper">
+                            <option value="">選擇保管人</option>
+                            <option value="Anita Chien">Anita Chien</option>
+                            <option value="Sandy Du">Sandy Du</option>
+                            <option value="Carryl Chan">Carryl Chan</option>
+                            <option value="Dexter Chen">Dexter Chen</option>
+                            <option value="Amos Zhang">Amos Zhang</option>
+                            <option value="Skuvy Liang">Skuvy Liang</option>
+                            <option value="SCM">SCM</option>
+                            <option value="客戶案場">客戶案場</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="remark_jp">Remark</label>
+                        <input type="text" class="form-control" id="remark_jp" name="remark">
+                    </div>
+                    <div class="form-group">
+                        <label for="sim_info_jp">SIM卡資訊</label>
+                        <input type="text" class="form-control" id="sim_info_jp" name="sim_info">
+                    </div>
+                    <div class="form-group">
+                        <label for="netsuite_dept_jp">NetSuite Dept</label>
+                        <input type="text" class="form-control" id="netsuite_dept_jp" name="netsuite_dept">
+                    </div>
+                    <div class="form-group">
+                        <label for="eis_program_jp">EIS Program</label>
+                        <input type="text" class="form-control" id="eis_program_jp" name="eis_program">
+                    </div>
+                    <div class="form-group">
+                        <label for="eg_account_jp">EG+ Account</label>
+                        <input type="text" class="form-control" id="eg_account_jp" name="eg_account">
+                    </div>
+                    <div class="form-group">
+                        <label for="location_jp">Location</label>
+                        <input type="text" class="form-control" id="location_jp" name="location">
+                    </div>
+                    <div class="form-group">
+                        <label for="firmware_jp">Firmware</label>
+                        <select class="form-control" id="firmware_jp" name="firmware">
+                            <option value="">選擇 Firmware</option>
+                            <option value="Cube-PLUS">Cube-PLUS</option>
+                            <option value="Cube-TPLUS">Cube-TPLUS</option>
+                            <option value="Cube-ETC">Cube-ETC</option>
+                            <option value="Atto-PLUS">Atto-PLUS</option>
+                            <option value="Atto-TPLUS">Atto-TPLUS</option>
+                            <option value="Atto-ETC">Atto-ETC</option>
+                            <option value="Atto-THA">Atto-THA</option>
+                            <option value="Atto-SC">Atto-SC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="connection_method_jp">連網方式</label>
+                        <select class="form-control" id="connection_method_jp" name="connection_method">
+                            <option value="">選擇連網方式</option>
+                            <option value="LTE">LTE</option>
+                            <option value="WIFI">WIFI</option>
+                            <option value="ETH(DONGLE)">ETH(DONGLE)</option>
+                            <option value="ETH(原生)">ETH(原生)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="note_jp">NOTE</label>
+                        <input type="text" class="form-control" id="note_jp" name="note">
+                    </div>
+                    <div class="form-group">
+                        <label for="pickup_person_jp">領料人</label>
+                        <input type="text" class="form-control" id="pickup_person_jp" name="pickup_person">
+                    </div>
+                    <div class="form-group">
+                        <label for="pickup_order_number_jp">領料單號</label>
+                        <input type="text" class="form-control" id="pickup_order_number_jp" name="pickup_order_number">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveMaterialButtonJP">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSV 匯入 JP 版的模態框 -->
+<div class="modal fade" id="importCsvModalJP" tabindex="-1" role="dialog" aria-labelledby="importCsvModalJPLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="importCsvFormJP" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importCsvModalJPLabel">CSV 匯入 JP 版物料</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="關閉">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div id="csvImportErrorJP" class="alert alert-danger" style="display: none;"></div>
+
+                    <div class="form-group">
+                        <label for="csv_file_jp">選擇 CSV 檔案：</label>
+                        <input type="file" class="form-control-file" id="csv_file_jp" name="csv_file" accept=".csv" required>
+                        <small class="form-text text-muted">請上傳 .csv 格式的檔案</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>CSV 範本說明
+                            <i class="fas fa-info-circle text-info" data-toggle="collapse" data-target="#csvSampleCollapseJP" style="cursor:pointer;"></i>
+                        </label>
+                        <div class="collapse mt-2" id="csvSampleCollapseJP" style="border: 1px solid #ccc; padding: 8px;">
+                            <strong>範例 CSV：</strong>
+                            <pre style="white-space: pre; background: #f8f9fa; padding: 8px;">
+Device Model,PI/MAC Address,P/N,狀態,保管人,Remark,SIM卡資訊,NetSuite Dept,EIS Program,EG+ Account,Client,Location,Firmware,連網方式,NOTE,領料人,領料單號
+Atto FAN w/ SIM,AA:BB:CC:DD:EE:FF,123456,使用中,Anita Chien,這是測試備註,SIM-INFO,Dept01,ProgramA,EGACCOUNT,MyClient,Taipei,Cube-PLUS,LTE,備註資訊,John,OR-999
+                            </pre>
+                            <p class="mb-0">
+                                <strong>以上示範：</strong><br>
+                                - 您可以自由填寫或留白，前端及後端皆未做「必填」強制。<br>
+                                - 如果有限制下拉選單的欄位 CSV 匯入資料與規範不一致，會被記錄在 DB 但「不會」顯示在前端。<br>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="uploadCsvButtonJP">匯入</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 讓 JP 版欄位可雙擊編輯 + 下拉選單更新 -->
+<script>
+    // ======= 雙擊編輯欄位 (editable-jp) =======
+    document.querySelectorAll('.editable-jp').forEach(function(td) {
+        td.addEventListener('dblclick', function() {
+            let fieldName = this.getAttribute('data-field');
+            let currentText = this.innerText.trim();
+            let materialId = this.getAttribute('data-id');
+            let tdElement = this;
+            
+            // 產生輸入框
+            let input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.classList.add('form-control', 'editing');
+            
+            tdElement.innerHTML = '';
+            tdElement.appendChild(input);
+            input.focus();
+            
+            // blur 時送出更新
+            input.addEventListener('blur', function() {
+                let newValue = input.value.trim();
+                if (newValue !== currentText) {
+                    fetch(`/edit_material_jp/${materialId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ [fieldName]: newValue })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            tdElement.innerHTML = newValue;
+                        } else {
+                            tdElement.innerHTML = currentText;
+                            alert(`更新 ${fieldName} 失敗：${data.error}`);
+                        }
+                    })
+                    .catch(err => {
+                        tdElement.innerHTML = currentText;
+                        alert(`更新 ${fieldName} 時發生錯誤`);
+                    });
+                } else {
+                    tdElement.innerHTML = currentText;
+                }
+            });
+            
+            // 按 Enter 時同樣 blur
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    input.blur();
+                }
+            });
+        });
+    });
+    
+    // ======= 下拉選單更新欄位 (與 TW 版類似) =======
+    function updateSelectFieldJP(selectorClass, fieldName) {
+        document.querySelectorAll(selectorClass).forEach(function(select) {
+            select.addEventListener('change', function() {
+                const materialId = this.getAttribute('data-id');
+                const newValue = this.value;
+                fetch(`/edit_material_jp/${materialId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ [fieldName]: newValue })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert(`更新 ${fieldName} 失敗：` + (data.error || '未知錯誤'));
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert(`更新 ${fieldName} 時發生錯誤`);
+                });
+            });
+        });
+    }
+    // 將常用的欄位掛上監聽
+    updateSelectFieldJP('.device-model-select-jp', 'device_model');
+    updateSelectFieldJP('.status-select-jp', 'status');
+    updateSelectFieldJP('.keeper-select-jp', 'keeper');
+    updateSelectFieldJP('.firmware-select-jp', 'firmware');
+    updateSelectFieldJP('.connection-method-select-jp', 'connection_method');
+    
+    // ======= 刪除物料 =======
+    document.querySelectorAll('.delete-material-jp').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const materialId = this.getAttribute('data-id');
+            if (confirm('確定要刪除此物料嗎？')) {
+                fetch(`/delete_material_jp/${materialId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('物料已刪除');
+                        this.closest('tr').remove();
+                    } else {
+                        alert('刪除失敗：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('刪除失敗');
+                });
+            }
+        });
+    });
+    
+    // ======= 新增物料 (JP) =======
+    document.getElementById('saveMaterialButtonJP').addEventListener('click', function() {
+        const form = document.getElementById('addMaterialFormJP');
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+        fetch('/add_material_jp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('物料已新增');
+                window.location.reload();
+            } else {
+                alert('新增失敗：' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('新增失敗');
+        });
+    });
+    
+    // ======= CSV 匯入 (JP) =======
+    document.getElementById('uploadCsvButtonJP').addEventListener('click', function() {
+        const form = document.getElementById('importCsvFormJP');
+        const formData = new FormData(form);
+        const errorDiv = document.getElementById('csvImportErrorJP');
+        errorDiv.style.display = 'none';
+        errorDiv.innerHTML = '';
+        fetch('/import_csv_jp', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('CSV 匯入成功，共匯入 ' + data.rows + ' 筆資料');
+                window.location.reload();
+            } else {
+                errorDiv.innerHTML = `匯入失敗：${data.error}`;
+                errorDiv.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorDiv.innerHTML = '匯入失敗：發生未知錯誤';
+            errorDiv.style.display = 'block';
+        });
+    });
+</script>
+
+{% endblock %}

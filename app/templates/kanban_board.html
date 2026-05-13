@@ -1,0 +1,125 @@
+{% extends "base1.html" %}
+
+{% block content %}
+<style>
+.kanban-wrapper{padding:20px;overflow-x:auto}
+.kanban-board{display:flex;gap:16px;min-height:calc(100vh - 140px);align-items:flex-start;padding-bottom:20px}
+.kanban-column{background:#1a2332;border-radius:10px;width:280px;min-width:280px;display:flex;flex-direction:column;max-height:calc(100vh - 160px)}
+.column-header{padding:14px;text-align:center;font-weight:700;color:#fff;border-bottom:3px solid;border-radius:10px 10px 0 0;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+.column-count{background:rgba(255,255,255,.1);border-radius:12px;padding:2px 8px;font-size:12px}
+.column-body{padding:10px;flex:1;overflow-y:auto;min-height:60px}
+.column-backlog .column-header{border-color:#95a5a6}.column-todo .column-header{border-color:#3498db}
+.column-in_progress .column-header{border-color:#f39c12}.column-review .column-header{border-color:#e74c3c}
+.column-done .column-header{border-color:#2ecc71}
+.kanban-card{background:#243044;border-radius:8px;padding:12px;margin-bottom:8px;cursor:grab;border-left:4px solid #555;transition:transform .15s,box-shadow .15s}
+.kanban-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.kanban-card.dragging{opacity:.4;transform:rotate(3deg)}
+.card-title{font-size:13px;font-weight:600;color:#e8e8e8;margin-bottom:6px}
+.card-desc{font-size:11px;color:#99a;line-height:1.5;margin-bottom:8px}
+.card-footer{display:flex;justify-content:space-between;align-items:center}
+.priority-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:uppercase}
+.priority-high{border-left-color:#e74c3c!important}.priority-medium{border-left-color:#f39c12!important}.priority-low{border-left-color:#2ecc71!important}
+.priority-badge.high{background:rgba(231,76,60,.2);color:#e74c3c}.priority-badge.medium{background:rgba(243,156,18,.2);color:#f39c12}
+.priority-badge.low{background:rgba(46,204,113,.2);color:#2ecc71}
+.card-actions button{background:none;border:none;color:#667;cursor:pointer;font-size:12px;padding:2px 6px;border-radius:4px}
+.card-actions button:hover{color:#fff;background:rgba(255,255,255,.1)}
+.drop-zone-active{background:rgba(52,152,219,.08);border-radius:8px;border:2px dashed #3498db}
+.add-card-btn{width:100%;padding:8px;background:none;border:1px dashed #3a506b;color:#778;border-radius:6px;cursor:pointer;font-size:12px;margin-top:4px;transition:border-color .2s,color .2s}
+.add-card-btn:hover{border-color:#3498db;color:#3498db}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal-box{background:#1a2332;border-radius:12px;padding:24px;width:420px;max-width:90vw}
+.modal-box h3{color:#fff;margin-bottom:16px;font-size:15px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;color:#aab;font-size:12px;margin-bottom:4px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:8px 10px;background:#243044;border:1px solid #3a506b;border-radius:6px;color:#e8e8e8;font-size:13px;box-sizing:border-box}
+.form-group textarea{min-height:60px;resize:vertical}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.btn-save{background:#3498db;color:#fff;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px}
+.btn-cancel{background:#3a506b;color:#ccc;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:13px}
+</style>
+
+<div class="kanban-wrapper">
+  <div class="kanban-board" id="kanbanBoard">
+    <div class="kanban-column column-backlog" data-column="backlog">
+      <div class="column-header"><span>📋 Backlog</span><span class="column-count" id="count-backlog">0</span></div>
+      <div class="column-body" id="col-backlog" ondragover="allowDrop(event)" ondrop="dropCard(event,'backlog')"></div>
+      <button class="add-card-btn" onclick="openAddModal('backlog')">+ 新增任務</button>
+    </div>
+    <div class="kanban-column column-todo" data-column="todo">
+      <div class="column-header"><span>📝 To Do</span><span class="column-count" id="count-todo">0</span></div>
+      <div class="column-body" id="col-todo" ondragover="allowDrop(event)" ondrop="dropCard(event,'todo')"></div>
+      <button class="add-card-btn" onclick="openAddModal('todo')">+ 新增任務</button>
+    </div>
+    <div class="kanban-column column-in_progress" data-column="in_progress">
+      <div class="column-header"><span>🔨 In Progress</span><span class="column-count" id="count-in_progress">0</span></div>
+      <div class="column-body" id="col-in_progress" ondragover="allowDrop(event)" ondrop="dropCard(event,'in_progress')"></div>
+      <button class="add-card-btn" onclick="openAddModal('in_progress')">+ 新增任務</button>
+    </div>
+    <div class="kanban-column column-review" data-column="review">
+      <div class="column-header"><span>🔍 Review</span><span class="column-count" id="count-review">0</span></div>
+      <div class="column-body" id="col-review" ondragover="allowDrop(event)" ondrop="dropCard(event,'review')"></div>
+      <button class="add-card-btn" onclick="openAddModal('review')">+ 新增任務</button>
+    </div>
+    <div class="kanban-column column-done" data-column="done">
+      <div class="column-header"><span>✅ Done</span><span class="column-count" id="count-done">0</span></div>
+      <div class="column-body" id="col-done" ondragover="allowDrop(event)" ondrop="dropCard(event,'done')"></div>
+      <button class="add-card-btn" onclick="openAddModal('done')">+ 新增任務</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cardModal">
+  <div class="modal-box">
+    <h3 id="modalTitle">新增任務</h3>
+    <div class="form-group"><label>標題</label><input type="text" id="taskTitle" placeholder="輸入任務標題"></div>
+    <div class="form-group"><label>描述</label><textarea id="taskDesc" placeholder="輸入任務描述"></textarea></div>
+    <div class="form-group"><label>優先級</label>
+      <select id="taskPriority"><option value="high">高</option><option value="medium" selected>中</option><option value="low">低</option></select>
+    </div>
+    <div class="modal-actions"><button class="btn-cancel" onclick="closeModal()">取消</button><button class="btn-save" onclick="saveTask()">儲存</button></div>
+  </div>
+</div>
+
+<script>
+let tasks=[];let editingId=null;let currentColumn='backlog';
+
+function getDefaultTasks(){return [
+{id:'t1',title:'歷史數據資料庫化',description:'將 MQTT 歷史資料存入 SQLite/PostgreSQL，取代 localStorage',column:'backlog',priority:'high'},
+{id:'t2',title:'告警通知系統',description:'SOC/SOH/溫度異常時觸發 Telegram Line 通知',column:'backlog',priority:'high'},
+{id:'t3',title:'數據匯出功能',description:'CSV/PDF 匯出監控報告，支援時間範圍篩選',column:'backlog',priority:'medium'},
+{id:'t4',title:'案場地圖視覺化',description:'Leaflet/Mapbox 整合，在地圖上顯示案場狀態',column:'backlog',priority:'low'},
+{id:'t5',title:'權限管理',description:'不同角色查看不同案場資料的 RBAC 系統',column:'backlog',priority:'medium'},
+{id:'t6',title:'Forecast UI 優化',description:'monitoring-forecast-ui.js 視覺化改進，加入趨勢圖表',column:'todo',priority:'high'},
+{id:'t7',title:'深色/亮色主題切換',description:'使用 teaasia-css-white-theme skill 實作主題切換',column:'todo',priority:'medium'},
+{id:'t8',title:'Kanban 看板系統',description:'建立專案管理看板，整合到 TeaAsia 系統',column:'in_progress',priority:'high'},
+{id:'t9',title:'MQTT 斷線重連機制',description:'monitoring-mqtt.js 自動重連 + 指數退避策略',column:'review',priority:'high'},
+{id:'t10',title:'MQTT WebSocket 連線',description:'monitoring-mqtt.js mqtt.js CDN ws broker',column:'done',priority:'high'},
+{id:'t11',title:'Topic 訊息解析',description:'monitoring-parser.js data 按 deviceUuid 分組',column:'done',priority:'high'},
+{id:'t12',title:'案場卡片動態建立',description:'monitoring-card.js SITES array to card HTML',column:'done',priority:'high'},
+{id:'t13',title:'多案場監控頁面',description:'multi_site_monitoring plus monitoring_system 路由',column:'done',priority:'high'},
+{id:'t14',title:'Forecast 預測引擎',description:'monitoring-forecast.js localStorage 30天留存 15min interval',column:'done',priority:'medium'}
+];}
+
+function loadTasks(){var s=localStorage.getItem('kanban_tasks');if(s){tasks=JSON.parse(s)}else{tasks=getDefaultTasks();saveTasks()}}
+function saveTasks(){localStorage.setItem('kanban_tasks',JSON.stringify(tasks))}
+</script>
+<script>
+function renderCard(t){return '<div class="kanban-card priority-'+t.priority+'" draggable="true" ondragstart="dragStart(event)" data-id="'+t.id+'"><div class="card-title">'+escHtml(t.title)+'</div>'+(t.description?'<div class="card-desc">'+escHtml(t.description)+'</div>':'')+'<div class="card-footer"><span class="priority-badge '+t.priority+'">'+{high:'高',medium:'中',low:'低'}[t.priority]+'</span><div class="card-actions"><button onclick="editTask(\''+t.id+'\')" title="編輯">✏️</button><button onclick="deleteTask(\''+t.id+'\')" title="刪除">🗑️</button></div></div></div>'}
+function escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function renderBoard(){['backlog','todo','in_progress','review','done'].forEach(function(col){var c=document.getElementById('col-'+col);c.innerHTML=tasks.filter(function(t){return t.column===col}).map(renderCard).join('');document.getElementById('count-'+col).textContent=tasks.filter(function(t){return t.column===col}).length})}
+function dragStart(e){e.dataTransfer.setData('text/plain',e.target.dataset.id);e.target.classList.add('dragging')}
+function allowDrop(e){e.preventDefault();e.currentTarget.classList.add('drop-zone-active')}
+function dropCard(e,col){e.preventDefault();document.querySelectorAll('.column-body').forEach(function(c){c.classList.remove('drop-zone-active')});var id=e.dataTransfer.getData('text/plain');var task=tasks.find(function(t){return t.id===id});if(task){task.column=col;saveTasks();renderBoard()}}
+document.addEventListener('dragend',function(){document.querySelectorAll('.column-body').forEach(function(c){c.classList.remove('drop-zone-active')});document.querySelectorAll('.kanban-card.dragging').forEach(function(c){c.classList.remove('dragging')})});
+
+function openAddModal(col){editingId=null;currentColumn=col;document.getElementById('modalTitle').textContent='新增任務';document.getElementById('taskTitle').value='';document.getElementById('taskDesc').value='';document.getElementById('taskPriority').value='medium';document.getElementById('cardModal').classList.add('active')}
+function editTask(id){var t=tasks.find(function(x){return x.id===id});if(!t)return;editingId=id;currentColumn=t.column;document.getElementById('modalTitle').textContent='編輯任務';document.getElementById('taskTitle').value=t.title;document.getElementById('taskDesc').value=t.description||'';document.getElementById('taskPriority').value=t.priority;document.getElementById('cardModal').classList.add('active')}
+function closeModal(){document.getElementById('cardModal').classList.remove('active');editingId=null}
+function saveTask(){var title=document.getElementById('taskTitle').value.trim();var desc=document.getElementById('taskDesc').value.trim();var priority=document.getElementById('taskPriority').value;if(!title){alert('請輸入標題');return}if(editingId){var t=tasks.find(function(x){return x.id===editingId});if(t){t.title=title;t.description=desc;t.priority=priority}}else{var newId='t'+(Date.now()%100000);tasks.push({id:newId,title:title,description:desc,column:currentColumn,priority:priority})}saveTasks();renderBoard();closeModal()}
+function deleteTask(id){if(!confirm('確定刪除此任務？'))return;tasks=tasks.filter(function(t){return t.id!==id});saveTasks();renderBoard()}
+document.getElementById('cardModal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.addEventListener('DOMContentLoaded',function(){loadTasks();renderBoard()});
+</script>
+
+{% endblock %}

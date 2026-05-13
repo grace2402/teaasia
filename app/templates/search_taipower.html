@@ -1,0 +1,56 @@
+{% extends "base1.html" %}
+
+{% block title %}台電電表資料查詢{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>電表資料查詢</h2>
+    </div>
+
+    <form method="GET" action="{{ url_for('main.search_taipower_records') }}" class="filter-form">
+        <div class="filter-group" style="flex: 2;">
+            <label for="full_meter_number">表號 (多個請以逗號分隔)</label>
+            <input type="text" class="form-control" id="full_meter_number" name="full_meter_number"
+                   placeholder="請輸入完整表號，例如：12345,67890"
+                   value="{{ request.args.get('full_meter_number', '') }}">
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">查詢</button>
+        </div>
+    </form>
+
+    {% if results is defined %}
+    <div class="card-container mt-4">
+        <h2 style="margin-bottom: 16px;">查詢結果</h2>
+        {% if results %}
+        <div class="table-wrapper" style="margin-top: 16px;">
+            <table class="styled-table">
+                <thead>
+                    <tr>
+                        <th>表號</th>
+                        <th>GUK_H</th>
+                        <th>AK_H</th>
+                        <th>倍數</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in results %}
+                    <tr>
+                        <td>{{ rec.full_meter_number }}</td>
+                        <td>{{ rec.guk_h }}</td>
+                        <td>{{ rec.ak_h }}</td>
+                        <td>{{ rec.multiplier }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mt-3" role="alert">找不到符合的電表資料。</div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

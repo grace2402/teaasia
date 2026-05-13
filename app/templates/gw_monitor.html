@@ -1,0 +1,174 @@
+{% extends "base1.html" %}
+
+{% block title %}監控 GW 清單{% endblock %}
+
+{% block page_content %}
+<style>
+    /* 讓表格儲存格內容垂直置中且不換行 */
+    table.table td,
+    table.table th {
+        vertical-align: middle !important;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="container mt-5">
+    <h2 class="mb-4">監控 GW 清單</h2>
+
+    <!-- 新增按鈕 -->
+    <div style="text-align: right; margin-bottom: 15px;">
+        <button class="btn btn-primary" data-toggle="modal" data-target="#addGWModal">
+            新增監控 GW
+        </button>
+    </div>
+
+    <!-- GW 清單表格 -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>PID</th>
+                <th>偵測頻率 (秒)</th>
+                <th>Webhook URL</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gw in gw_monitors %}
+            <tr>
+                <td>{{ gw.gw_id }}</td>
+                <td>{{ gw.pid }}</td>
+                <td>{{ gw.frequency }}</td>
+                <td style="
+                    max-width: 300px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    display: inline-block;
+                " title="{{ gw.webhook_url }}">
+                    {{ gw.webhook_url }}
+                </td>
+                <td>
+                    <!-- 刪除 GW (POST) -->
+                    <form action="{{ url_for('main.delete_gw', gw_id=gw.id) }}" method="POST" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-danger btn-sm"
+                                onclick="return confirm('確定刪除這個 GW 嗎？');">
+                            刪除
+                        </button>
+                    </form>
+                    <!-- 編輯 GW：觸發 Modal -->
+                    <button class="btn btn-warning btn-sm"
+                            data-toggle="modal" data-target="#editGWModal"
+                            onclick="fillEditForm({{ gw.id }}, '{{ gw.gw_id }}', '{{ gw.pid }}', {{ gw.frequency }}, '{{ gw.webhook_url }}')">
+                        編輯
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 新增 GW 模態窗 -->
+<div class="modal fade" id="addGWModal" tabindex="-1" role="dialog" aria-labelledby="addGWModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form action="{{ url_for('main.add_gw') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addGWModalLabel">新增監控 GW</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="gw_id">Name</label>
+                        <input type="text" class="form-control" id="gw_id" name="gw_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pid">PID</label>
+                        <select class="form-control" id="pid" name="pid" required>
+                            <option value="">請選擇 PID</option>
+                            {% for spot in spots %}
+                                {% for gw in spot.gw_list %}
+                                    <option value="{{ gw }}">{{ gw }}</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">偵測頻率 (秒)</label>
+                        <input type="number" class="form-control" id="frequency" name="frequency" value="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="webhook_url">Webhook URL</label>
+                        <input type="url" class="form-control" id="webhook_url" name="webhook_url">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">新增</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 編輯 GW 模態窗 -->
+<div class="modal fade" id="editGWModal" tabindex="-1" role="dialog" aria-labelledby="editGWModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <form id="editGWForm" action="#" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editGWModalLabel">編輯監控 GW</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_gw_id">Name</label>
+                        <input type="text" class="form-control" id="edit_gw_id" name="gw_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_pid">PID</label>
+                        <!-- 使用下拉選單，與新增保持一致 -->
+                        <select class="form-control" id="edit_pid" name="pid" required>
+                            <option value="">請選擇 PID</option>
+                            {% for spot in spots %}
+                                {% for gw in spot.gw_list %}
+                                    <option value="{{ gw }}">{{ gw }}</option>
+                                {% endfor %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_frequency">偵測頻率 (秒)</label>
+                        <input type="number" class="form-control" id="edit_frequency" name="frequency" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_webhook_url">Webhook URL</label>
+                        <input type="url" class="form-control" id="edit_webhook_url" name="webhook_url">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">儲存修改</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 編輯 GW 的 Modal 填入資料
+    function fillEditForm(id, gw_id, pid, frequency, webhook_url) {
+        document.getElementById('editGWForm').action = `/edit_gw/${id}`;
+        document.getElementById('edit_gw_id').value = gw_id;
+        document.getElementById('edit_pid').value = pid;
+        document.getElementById('edit_frequency').value = frequency;
+        document.getElementById('edit_webhook_url').value = webhook_url;
+    }
+</script>
+{% endblock %}

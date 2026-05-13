@@ -1,0 +1,146 @@
+{% extends 'base1.html' %}
+{% block title %}建立 Confluence 子頁面</div>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+<div class="edit-card">
+  <h2>建立 Confluence 子頁面</h2>
+  <form method="post">
+    <!-- CSRF 驗證 -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+    <!-- 1. 狀態 + 時間戳組 Title -->
+    <div class="row mb-3">
+      <div class="col-md-3">
+        <label for="status" class="form-label">狀態</label>
+        <select class="form-control" id="status" name="status">
+          <option value="TMP">TMP</option>
+          <option value="KOM">KOM</option>
+          <option value="PJ">PJ</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="title" class="form-label">頁面標題</label>
+        <input type="text" id="title" name="title"
+               class="form-control" readonly required>
+      </div>
+    </div>
+
+    <!-- 2. 專案資料夾 (Google Drive 連結) -->
+    <div class="mb-3">
+      <label for="folder_link" class="form-label">專案資料夾 (Google Drive 連結)</label>
+      <input type="url" id="folder_link" name="folder_link"
+             class="form-control"
+             placeholder="https://drive.google.com/…">
+    </div>
+
+    <!-- 3. 目的：動態表格 -->
+    <div class="mb-3">
+      <label class="form-label">目的 (對象 &amp; 關鍵目標)</label>
+      <table class="table table-sm" id="purposeTable">
+        <thead>
+          <tr>
+            <th>對象</th>
+            <th>關鍵目標</th>
+            <th style="width:1rem;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="text" name="purpose_object[]" class="form-control"></td>
+            <td><input type="text" name="purpose_target[]" class="form-control"></td>
+            <td><button type="button" class="btn btn-sm btn-danger remove-row">&times;</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <button type="button" id="addRow" class="btn btn-sm btn-outline-primary">
+        + 新增一行
+      </button>
+    </div>
+
+    <!-- 4. 服務內容、專案時程、服務時間 -->
+    <div class="mb-3">
+      <label for="service_content" class="form-label">服務內容</label>
+      <textarea id="service_content" name="service_content"
+                class="form-control" rows="2"></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="project_schedule" class="form-label">專案時程</label>
+      <textarea id="project_schedule" name="project_schedule"
+                class="form-control" rows="2"></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="service_time" class="form-label">服務時間</label>
+      <textarea id="service_time" name="service_time"
+                class="form-control" rows="2"></textarea>
+    </div>
+
+    <!-- 5. 業務、PJO @某人 -->
+    <div class="mb-3 row">
+      <div class="col-md-6">
+        <label for="sales" class="form-label">業務</label>
+        <input type="text" id="sales" name="sales"
+               class="form-control" placeholder="Skuvy Liang">
+      </div>
+      <div class="col-md-6">
+        <label for="pjo" class="form-label">PJO</label>
+        <input type="text" id="pjo" name="pjo"
+               class="form-control" placeholder="Skuvy Liang">
+      </div>
+    </div>
+
+    <!-- 按鈕 -->
+    <div style="text-align: right; margin-top: 15px;">
+      <button type="submit" class="btn btn-success">送出並建立</button>
+      <a href="{{ url_for('main.confluence_overview') }}" class="btn btn-secondary ms-2">取消</a>
+    </div>
+  </form>
+</div>
+
+{# 自動計算 Title & 動態表格的 JS #}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // 1. 產生 timestamp: YYMMDDHHmm
+  function getTimestamp(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const yy = String(d.getFullYear()).slice(2);
+    return yy + pad(d.getMonth()+1) + pad(d.getDate())
+         + pad(d.getHours()) + pad(d.getMinutes());
+  }
+
+  const statusEl = document.getElementById('status');
+  const titleEl  = document.getElementById('title');
+
+  function refreshTitle(){
+    titleEl.value = statusEl.value + getTimestamp();
+  }
+
+  // On load & on change
+  refreshTitle();
+  statusEl.addEventListener('change', refreshTitle);
+
+  // 2. 動態表格：新增 & 刪除列
+  const addRowBtn = document.getElementById('addRow');
+  const tableBody = document.querySelector('#purposeTable tbody');
+
+  addRowBtn.addEventListener('click', ()=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" name="purpose_object[]" class="form-control"></td>
+      <td><input type="text" name="purpose_target[]" class="form-control"></td>
+      <td><button type="button" class="btn btn-sm btn-danger remove-row">&times;</button></td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  // Delegation for remove
+  tableBody.addEventListener('click', e=>{
+    if(e.target.matches('.remove-row')){
+      e.target.closest('tr').remove();
+    }
+  });
+});
+</script>
+{% endblock %}

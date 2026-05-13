@@ -1,0 +1,49 @@
+{% extends "base1.html" %}
+
+{% block page_content %}
+<div class="container-fluid">
+<div class="edit-card">
+    <h2>編輯維運紀錄</h2>
+    <form action="{{ url_for('main.edit_maintenance_record', record_id=record.id) }}" method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.datetime.label }}
+            {{ form.datetime(class="form-control") }}
+            {% if form.datetime.errors %}
+                <small class="text-danger">{{ form.datetime.errors[0] }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ form.location.label }}
+            {{ form.location(class="form-control") }}
+            {% if form.location.errors %}
+                <small class="text-danger">{{ form.location.errors[0] }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ form.description.label }}
+            {{ form.description(class="form-control", rows="3") }}
+            {% if form.description.errors %}
+                <small class="text-danger">{{ form.description.errors[0] }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ form.jira_link.label }}
+            {{ form.jira_link(class="form-control") }}
+            {% if form.jira_link.errors %}
+                <small class="text-danger">{{ form.jira_link.errors[0] }}</small>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            {{ form.performer.label }}
+            {{ form.performer(class="form-control") }}
+            {% if form.performer.errors %}
+                <small class="text-danger">{{ form.performer.errors[0] }}</small>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">保存變更</button>
+        <a href="{{ url_for('main.maintenance_records') }}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+
+</div>{% endblock %}

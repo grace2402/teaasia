@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}ByTaiwan - Product Detial{% endblock %}
+
+{% block page_content %}
+    <h2>Product : {{ display_product.common_name }}</h2>
+    <div class="row">
+    	<p></p>
+		<p></p>	        		
+	    <div style='border-bottom:1px solid #ccc;'></div>
+    	<p></p>
+		<p></p>	   	    
+	    <div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
+
+	        <img src="{{ url_for('static', filename='product/images/'+ display_product.imgurl) }}" class="img-thumbnail center-block" alt="Responsive image" style="width:100%" >
+
+	    </div>
+    	<div class="col-xs-12 col-sm-6 col-md-6 col-lg-6">
+          <ul>
+            <p><h2><li>Product type: {{ display_product.product_type }}</li></h2></p>
+            <p><h2><li>Color: {{ display_product.color }}</li></h2></p>
+            <p><h2><li>Size: {{ display_product.size }}</li></h2></p>
+            {% if display_product.available %}
+              <p><h2><li>Status : In stock</li></h2></p>
+            {% else %}
+              <p><li class='warning'>Warning! This product was no in stock.</li></p>
+            {% endif %}
+          </ul>
+
+	        <h3>Price per package : ${{ display_product.price_str() }}</h3>
+	    	<div class="well text-center">
+		        <form action="/product/add_to_cart/{{ display_product.id }}">
+		            <label>
+		                <input type="number" name="qty" value="1" min="1" max="10">
+		            </label>
+		            <label>
+		                <input type="submit" class="btn btn-large btn-primary" value="Add to Cart">
+		            </label>
+		        </form>
+	        </div>
+	        </div>
+        </div>
+        <p>
+        <p>
+{% endblock %}

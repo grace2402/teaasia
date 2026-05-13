@@ -1,0 +1,537 @@
+{% extends "base1.html" %}
+
+{% block title %}站點管理{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        /* ── 操作列按鈕縮小 ── */
+        .actions-cell { white-space: nowrap; }
+        .actions-cell .btn-gradient-sm,
+        .actions-cell button.btn-gradient-sm,
+        .actions-cell a.btn-gradient-sm {
+            font-size: 16px !important;
+            padding: 5px 10px !important;
+            line-height: 1.4 !important;
+            margin-left: 4px !important;
+        }
+
+        /* ── 監控及操作欄位內容字型 (覆蓋 base1.html !important) ── */
+        .styled-table tbody td:nth-child(8) {
+            font-size: 20px !important;
+            white-space: nowrap !important;
+        }
+        .actions-cell .expand-btn {
+            font-size: 16px !important;
+            padding: 5px 10px !important;
+        }
+
+        /* ── 深色主題監控區塊 ── */
+        .monitoring-section {
+            background: #1a2a3a;
+            border-radius: 12px;
+            padding: 16px;
+            margin: 12px 0;
+            border: 1px solid #2a4a6a;
+        }
+
+        .monitoring-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a4a6a;
+        }
+
+        .monitoring-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .monitoring-time {
+            font-size: 12px;
+            color: #8899aa;
+        }
+
+        /* ── SOC 條 ── */
+        .soc-bar { margin-bottom: 12px; }
+        .soc-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .soc-track {
+            height: 14px;
+            background: #0f1923;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+        .soc-fill {
+            height: 100%;
+            border-radius: 7px;
+            transition: width 0.3s;
+        }
+        .soc-fill.green  { background: linear-gradient(90deg, #00d4ff, #4ade80); }
+        .soc-fill.blue   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .soc-fill.grey   { background: linear-gradient(90deg, #4b5563, #6b7280); }
+
+        /* ── 資料網格 ── */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .data-cell {
+            background: #0f1923;
+            border-radius: 8px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .data-value {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .data-value.purple { color: #a855f7; }
+        .data-value.yellow { color: #fbbf24; }
+        .data-value.red    { color: #ef4444; }
+        .data-value.blue   { color: #3b82f6; }
+        .data-unit {
+            font-size: 11px;
+            color: #8899aa;
+            margin-top: 2px;
+        }
+
+        /* ── Delta V ── */
+        .delta-v-section {
+            padding: 8px 10px;
+            background: #0f1923;
+            border-top: 1px solid #2a4a6a;
+            font-size: 13px;
+            color: #e0e6ed;
+        }
+
+        /* ── 底部指標 ── */
+        .bottom-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding: 12px 10px;
+            background: #0f1923;
+            border-top: 1px solid #2a4a6a;
+        }
+        .metric {
+            text-align: center;
+            flex: 1;
+        }
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .metric-unit {
+            font-size: 11px;
+            color: #8899aa;
+            margin-top: 2px;
+        }
+        .metric.disabled .metric-value,
+        .metric.disabled .metric-unit {
+            color: #3b4d63;
+        }
+
+        /* ── 狀態徽章 ── */
+        .status-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .status-badge.online  { background: #22c55e; }
+        .status-badge.offline { background: #4b5563; }
+
+        /* ── 展開/收合按鈕 ── */
+        .expand-btn {
+            cursor: pointer;
+            background: none;
+            border: 1px solid #1e3054;
+            color: #8899aa;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .expand-btn:hover {
+            background: #1e3054;
+            color: #e0e6ed;
+        }
+
+        /* ── 無資料 ── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 20px;
+            color: #667788;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    </style>
+{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>站點管理</h2>
+    </div>
+
+    <!-- 篩選表單 -->
+    <form method="GET" action="{{ url_for('main.site_management') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="site_name_filter">站點名稱</label>
+            <input type="text" class="form-control" id="site_name_filter" name="site_name_filter"
+                   value="{{ site_name_filter or '' }}" placeholder="輸入站點名稱">
+        </div>
+        <div class="filter-group">
+            <label for="project_code_filter">專案代碼</label>
+            <input type="text" class="form-control" id="project_code_filter" name="project_code_filter"
+                   value="{{ project_code_filter or '' }}" placeholder="輸入專案代碼">
+        </div>
+        <div class="filter-group">
+            <label for="client_id">客戶</label>
+            <select class="form-control" id="client_id" name="client_id">
+                <option value="">所有客戶</option>
+                {% for client in all_clients %}
+                <option value="{{ client.id }}" {% if client_id and client_id == client.id %}selected{% endif %}>
+                    {{ client.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.site_management') }}" class="btn btn-gradient-sm" style="background:#6c757d;">取消篩選</a>
+        </div>
+    </form>
+
+    <!-- 新建站點按鈕 -->
+    <div class="action-bar">
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addSpotModal">
+            新建站點
+        </button>
+    </div>
+
+    <!-- 站點列表表格 -->
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>名稱</th>
+                    <th>描述</th>
+                    <th>經度</th>
+                    <th>緯度</th>
+                    <th>GW列表</th>
+                    <th>專案代碼</th>
+                    <th>PCS UUID</th>
+                    <th>監控</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for spot in spots %}
+                <!-- 主表格行 -->
+                <tr>
+                    <td>{{ spot.site_name }}</td>
+                    <td>{{ spot.description }}</td>
+                    <td>{{ spot.longitude|round(2) if spot.longitude else '' }}</td>
+                    <td>{{ spot.latitude|round(2) if spot.latitude else '' }}</td>
+                    <td class="gw-list-column">
+                        {{ (spot.gw_list or [])|join('<br>')|safe }}
+                    </td>
+                    <td>{{ spot.project_code }}</td>
+                    <td style="font-family:monospace;font-size:11px;word-break:break-all;">{{ (spot.pcs_uuid or [])|join('<br>')|safe if spot.pcs_uuid else '-' }}</td>
+                    <td style="text-align:center;">{% if spot.enable_monitoring %}<span style="color:#4ade80;">● 啟用</span>{% else %}<span style="color:#6b7280;">○ 未啟</span>{% endif %}</td>
+                    <td class="actions-cell">
+                        <a href="{{ url_for('main.edit_spot', spot_id=spot.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+                        <form method="POST" action="{{ url_for('main.delete_spot', spot_id=spot.id) }}" style="display:inline; margin-left:4px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此站點嗎？');">刪除</button>
+                        </form>
+                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:4px;" data-spot-id="{{ spot.id }}">
+                            合約
+                        </button>
+                        <button type="button" class="btn-gradient-sm" style="background:linear-gradient(135deg,#28a745,#218838); margin-left:4px;"
+                                data-link="{{ url_for('main.site_detail', spot_id=spot.id, _external=True) }}">
+                            連結
+                        </button>
+                        <button type="button" class="expand-btn" style="margin-left:4px;" data-expand="spot-{{ spot.id }}">
+                            監控
+                        </button>
+                    </td>
+                </tr>
+                <!-- 合約資訊隱藏列 -->
+                <tr class="contract-row" id="contract-row-{{ spot.id }}" style="display:none;">
+                    <td colspan="9">
+                        {% set contracts = spot_contract_map[spot.id] %}
+                        {% if contracts and contracts|length > 0 %}
+                            {% for contract in contracts %}
+                                <strong>保固時間：</strong>{{ contract.warranty_start|replace("-", "/") }} ~ {{ contract.warranty_end|replace("-", "/") }}<br>
+                                <strong>維護時間：</strong>{{ contract.maintenance_start|replace("-", "/") }} ~ {{ contract.maintenance_end|replace("-", "/") }}<br><hr>
+                            {% endfor %}
+                        {% else %}
+                            <em>此站點尚無合約資料</em>
+                        {% endif %}
+                    </td>
+                </tr>
+                <!-- 監控資料隱藏列 -->
+                <tr class="monitoring-row" id="monitoring-row-{{ spot.id }}" style="display:none;">
+                    <td colspan="9">
+                        {% if spot.monitoring %}
+                        <div class="monitoring-section">
+                            <div class="monitoring-header">
+                                <span class="monitoring-title">⚡ BESS 即時監控</span>
+                                <span class="monitoring-time">{{ spot.monitoring.updated_at }}</span>
+                            </div>
+
+                            <!-- SOC 條 -->
+                            <div class="soc-bar">
+                                <div class="soc-label">
+                                    <span>SOC</span>
+                                    <span>{{ "%.1f"|format(spot.monitoring.soc) }}%</span>
+                                </div>
+                                <div class="soc-track">
+                                    {% if spot.monitoring.soc > 50 %}
+                                    <div class="soc-fill green" style="width: {{ spot.monitoring.soc }}%"></div>
+                                    {% elif spot.monitoring.soc > 0 %}
+                                    <div class="soc-fill blue" style="width: {{ spot.monitoring.soc }}%"></div>
+                                    {% else %}
+                                    <div class="soc-fill grey" style="width: 0%"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- 資料網格 -->
+                            <div class="data-grid">
+                                <div class="data-cell">
+                                    <span class="data-value purple">{{ "%.1f"|format(spot.monitoring.soh) }}%</span>
+                                    <span class="data-unit">SOH</span>
+                                </div>
+                                <div class="data-cell">
+                                    <span class="data-value yellow">{{ "%.1f"|format(spot.monitoring.temperature) }}°C</span>
+                                    <span class="data-unit">溫度</span>
+                                </div>
+                                <div class="data-cell">
+                                    <span class="data-value red">{{ "%.4f"|format(spot.monitoring.cell_max) }}</span>
+                                    <span class="data-unit">電壓 V</span>
+                                </div>
+                                <div class="data-cell">
+                                    <span class="data-value blue">{{ "%.4f"|format(spot.monitoring.cell_min) }}</span>
+                                    <span class="data-unit">電流 A</span>
+                                </div>
+                            </div>
+
+                            <!-- Delta V -->
+                            <div class="delta-v-section">
+                                ΔV = {{ "%.3f"|format(spot.monitoring.delta_v) }} V
+                            </div>
+
+                            <!-- 底部指標 -->
+                            <div class="bottom-metrics">
+                                <div class="metric">
+                                    <div class="metric-value" style="color:#00d4ff">{{ "%.1f"|format(spot.monitoring.power) }}</div>
+                                    <div class="metric-unit">kW</div>
+                                </div>
+                                <div class="metric">
+                                    <div class="metric-value" style="color:#4ade80">{{ "%.1f"|format(spot.monitoring.ems_setting) }}</div>
+                                    <div class="metric-unit">EMS kW</div>
+                                </div>
+                                <div class="metric disabled">
+                                    <div class="metric-value">0.000</div>
+                                    <div class="metric-unit">ΔV</div>
+                                </div>
+                                <div class="status-badge online">✓</div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <div class="icon">📡</div>
+                            <div>等待 MQTT 資料...</div>
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分頁導航 -->
+    {% if pagination.pages > 1 %}
+    <div class="pagination-wrapper">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for('main.site_management', page=pagination.prev_num, site_name_filter=site_name_filter, project_code_filter=project_code_filter, client_id=client_id) }}">上一頁</a>
+        {% else %}
+        <span class="page-link disabled">上一頁</span>
+        {% endif %}
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                {% if page_num == pagination.page %}
+                    <a class="page-link active" href="{{ url_for('main.site_management', page=page_num, site_name_filter=site_name_filter, project_code_filter=project_code_filter, client_id=client_id) }}">{{ page_num }}</a>
+                {% else %}
+                    <a class="page-link" href="{{ url_for('main.site_management', page=page_num, site_name_filter=site_name_filter, project_code_filter=project_code_filter, client_id=client_id) }}">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+            <span class="page-link disabled">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for('main.site_management', page=pagination.next_num, site_name_filter=site_name_filter, project_code_filter=project_code_filter, client_id=client_id) }}">下一頁</a>
+        {% else %}
+        <span class="page-link disabled">下一頁</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- 複製連結用 Modal -->
+<div class="modal fade" id="copyLinkModal" tabindex="-1" role="dialog" aria-labelledby="copyLinkModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="copyLinkModalLabel">複製連結</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="關閉">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+            <input type="text" class="form-control" id="copyLinkInput" readonly>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">關閉</button>
+        <button type="button" class="btn-gradient" id="copyLinkBtn">複製</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 新建站點的 Modal -->
+<div class="modal fade" id="addSpotModal" tabindex="-1" aria-labelledby="addSpotModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSpotModalLabel">新建站點</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ url_for('main.add_spot') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="site_name">站點名稱</label>
+                        <input type="text" class="form-control" id="site_name" name="site_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">描述</label>
+                        <input type="text" class="form-control" id="description" name="description">
+                    </div>
+                    <div class="form-group">
+                        <label for="longitude">經度</label>
+                        <input type="number" step="any" class="form-control" id="longitude" name="longitude">
+                    </div>
+                    <div class="form-group">
+                        <label for="latitude">緯度</label>
+                        <input type="number" step="any" class="form-control" id="latitude" name="latitude">
+                    </div>
+                    <div class="form-group">
+                        <label for="gw_list">GW 列表 (以逗號分隔)</label>
+                        <input type="text" class="form-control" id="gw_list" name="gw_list">
+                    </div>
+                    <div class="form-group">
+                        <label for="project_code">專案代碼</label>
+                        <input type="text" class="form-control" id="project_code" name="project_code">
+                    </div>
+                    <div class="form-group">
+                        <label for="pcs_uuid">PCS UUID (多個以逗號分隔)</label>
+                        <input type="text" class="form-control" id="pcs_uuid" name="pcs_uuid" placeholder="例: abc123-def456, xyz789-uvw012">
+                        <small style="color:#8899aa;">BESS 儲能系統的 PCS/BMS UUID，用於 MQTT 資料匹配</small>
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="enable_monitoring" name="enable_monitoring" value="1">
+                        <label for="enable_monitoring" style="margin:0;">啟用多案場監控</label>
+                    </div>
+                    <div class="form-group">
+                        <label for="client_id">客戶</label>
+                        <select class="form-control" id="client_id" name="client_id">
+                            <option value="">請選擇客戶</option>
+                            {% for client in all_clients %}
+                            <option value="{{ client.id }}">{{ client.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                    <button type="submit" class="btn-gradient">提交</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('copyLinkBtn').addEventListener('click', function() {
+    var input = document.getElementById('copyLinkInput');
+    input.select();
+    document.execCommand('copy');
+    alert('連結已複製');
+    $('#copyLinkModal').modal('hide');
+});
+
+// 顯示合約
+document.querySelectorAll('[data-spot-id]').forEach(function(btn) {
+    if (btn.classList.contains('delete-spot-form')) return;
+    btn.addEventListener('click', function() {
+        var spotId = this.getAttribute('data-spot-id');
+        var row = document.getElementById('contract-row-' + spotId);
+        if (row.style.display === 'none' || row.style.display === '') {
+            row.style.display = 'table-row';
+            this.textContent = '顯示合約';
+        } else {
+            row.style.display = 'none';
+            this.textContent = '隱藏合約';
+        }
+    });
+});
+
+// 展開/收合監控區塊
+document.querySelectorAll('[data-expand]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var spotId = this.getAttribute('data-expand').replace('spot-', '');
+        var row = document.getElementById('monitoring-row-' + spotId);
+        if (row.style.display === 'none' || row.style.display === '') {
+            row.style.display = 'table-row';
+            this.textContent = '收合';
+        } else {
+            row.style.display = 'none';
+            this.textContent = '監控';
+        }
+    });
+});
+</script>
+
+{% endblock %}

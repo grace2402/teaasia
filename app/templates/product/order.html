@@ -1,0 +1,54 @@
+<!-- app/templates/product/order.html -->
+{% import "bootstrap/utils.html" as utils %}
+{% extends "base.html" %}
+
+{% if message %}
+{{ utils.flash.message() }}
+{% endif %}
+
+{% block title %}ByTaiwan - Order{% endblock %}
+
+{% block page_content %}
+
+    <div class="page-header">
+    <a href="{{ url_for('product.shopping_cart') }}" class="btn btn-large btn-primary">Cart</a>
+	</div>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Order_ID</th>
+            <th>PaymentID</th>
+            <th>email</th>
+            <th>Order_Time</th>
+            <th>Total</th>
+            <th>Shipout</th>
+        </tr>
+    </thead>
+    <tbody>
+        {%if orders.items %}
+        {% for order in orders.items %}
+        <tr>
+            <td><a href="{{ url_for("product.shopping_order_detail",id =order.id) }}">{{ order.id }}</a></td>
+            <td>{{ order.payment_id }}</td>
+            <td>{{ order.email }}</td>
+            <td>{{ (order.order_datetime).strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>${{ order.total }}</td>
+            {% if order.shipout  %}
+            <td>Shipout</td>
+            {% else %}
+            <td>Didn't shipout</td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr>
+            <td>No orders.</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+    <div class="text-center">
+		{% if orders.has_prev %}<a href="{{ url_for('product.shopping_order', page=orders.prev_num) }}">&lt;&lt; Newer posts</a>{% else %}&lt;&lt; Pre Pages{% endif %} | 
+		{% if orders.has_next %}<a href="{{ url_for('product.shopping_order', page=orders.next_num) }}">Older posts &gt;&gt;</a>{% else %}Next Pages &gt;&gt;{% endif %}
+	</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base1.html" %}
+
+{% block title %}新增站點{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid">
+<div class="edit-card">
+    <h2>新增站點</h2>
+    <form method="post">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.site_name.label }}
+            {{ form.site_name(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.description.label }}
+            {{ form.description(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.longitude.label }}
+            {{ form.longitude(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.latitude.label }}
+            {{ form.latitude(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.gw_list.label }}
+            {{ form.gw_list(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.project_code.label }}
+            {{ form.project_code(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.pcs_uuid.label }}
+            {{ form.pcs_uuid(class="form-control", placeholder="多個UUID用逗號分隔, 例: uuid1,uuid2") }}
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:8px;">
+            {{ form.enable_monitoring() }}
+            {{ form.enable_monitoring.label }}
+        </div>
+        <!-- 新增客戶選項 -->
+        <div class="form-group">
+            <label for="client">客戶</label>
+            <select class="form-control" id="client" name="client_id">
+                <option value="">請選擇客戶</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}">{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+        <a href="{{ url_for('main.site_management') }}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+
+</div>{% endblock %}

@@ -1,0 +1,24 @@
+<!-- app/templates/admin/user.html -->
+
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}ByTaiwan - Edit User{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <form>
+        <input type="button" value="&laquo; Previous" onclick="history.back()">
+    </form>   
+</div>
+<div class="row">
+    <div class="col-xs-12 col-sm-6 col-md-6 col-lg-4 col-center-block">
+        {{ wtf.quick_form(form) }}
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            <label for="is_admin">Admin</label>
+            {{ form.is_admin(class="form-control") }}
+        </div>
+    </div>
+</div>
+{% endblock %}

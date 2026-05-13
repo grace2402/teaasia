@@ -1,0 +1,274 @@
+{% extends "base1.html" %}
+
+{% block title %}
+SIM 卡狀態管理
+{% endblock %}
+
+{% block page_content %}
+
+<style>
+    /* 確保 Bootstrap modal 正確覆蓋 */
+    .modal {
+        z-index: 1050 !important;
+    }
+    .modal-backdrop {
+        z-index: 1040 !important;
+    }
+</style>
+
+<div class="container-fluid mt-5">
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+
+    <div class="page-header-bar">
+        <h2>SIM 卡狀態管理</h2>
+    </div>
+
+    <!-- 篩選表單 -->
+    <form method="GET" action="{{ url_for('main.simcard_status') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="filter_pid">PID</label>
+            <input type="text" class="form-control" id="filter_pid" name="pid" placeholder="PID" value="{{ request.args.get('pid', '') }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_iccid">ICCID</label>
+            <input type="text" class="form-control" id="filter_iccid" name="iccid" placeholder="ICCID" value="{{ request.args.get('iccid', '') }}">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_status">狀態</label>
+            <select class="form-control" id="filter_status" name="status">
+                <option value="">所有狀態</option>
+                <option value="active"  {% if request.args.get('status', '') == 'active'  %}selected{% endif %}>active</option>
+                <option value="suspend" {% if request.args.get('status', '') == 'suspend' %}selected{% endif %}>suspend</option>
+                <option value="dead"    {% if request.args.get('status', '') == 'dead'    %}selected{% endif %}>dead</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filter_group">Group</label>
+            <input type="text" class="form-control" id="filter_group" name="group" placeholder="Group" value="{{ request.args.get('group', '') }}">
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.simcard_status') }}" class="btn btn-gradient-sm" style="background: #6c757d;">重置</a>
+        </div>
+    </form>
+
+    <!-- 操作按鈕列 -->
+    <div class="action-bar">
+        <a href="{{ url_for('main.simcard_edit_records') }}" class="btn btn-info">
+            查看全部編輯紀錄
+        </a>
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#importCsvModal">
+            匯入 CSV
+        </button>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addSimCardModal">
+            新增 SIM 卡狀態
+        </button>
+        <a href="{{ url_for('main.export_simcard_csv', pid=request.args.get('pid', ''), iccid=request.args.get('iccid', ''), status=request.args.get('status', ''), group=request.args.get('group', '')) }}" class="btn btn-warning">匯出 CSV</a>
+    </div>
+
+    <!-- 資料表格 -->
+    <div class="card-container">
+        <table class="table table-hover table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>PID</th>
+                    <th>ICCID</th>
+                    <th>狀態</th>
+                    <th>Group</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in statuses %}
+                {% if record.pid != 'dummy' %}
+                <tr>
+                    <td>{{ record.id }}</td>
+                    <td>{{ record.pid }}</td>
+                    <td>{{ record.iccid }}</td>
+                    <td>{{ record.status }}</td>
+                    <td>{{ record.group }}</td>
+                    <td>
+                        {% if record.status != 'dead' or current_user.is_admin %}
+                        <a href="{{ url_for('main.edit_simcard_status', record_id=record.id) }}" class="btn btn-warning btn-sm">
+                            編輯
+                        </a>
+                        {% endif %}
+                        <form method="post" action="{{ url_for('main.delete_simcard_status', status_id=record.id) }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定要刪除此記錄嗎？');">
+                                刪除
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-info btn-sm toggle-edit-records" data-record-id="{{ record.id }}">
+                            顯示編輯紀錄
+                        </button>
+                    </td>
+                </tr>
+                <!-- 隱藏的編輯紀錄列 -->
+                <tr class="edit-records-row" id="edit-records-{{ record.id }}" style="display: none;">
+                    <td colspan="6">
+                        {% set edits = edit_records_map[record.id] %}
+                        {% if edits and edits|length > 0 %}
+                            {% for edit in edits %}
+                                <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                                    <strong>原 PID:</strong> {{ edit.original_pid }}<br>
+                                    <strong>原 ICCID:</strong> {{ edit.original_iccid }}<br>
+                                    <strong>原 狀態:</strong> {{ edit.original_status }}<br>
+                                    <strong>原 Group:</strong> {{ edit.original_group }}<br>
+                                    <strong>更新者:</strong> {{ edit.updated_by }}<br>
+                                    <strong>更新時間(UTC):</strong> {{ edit.updated_at }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <em style="padding: 8px 0; display: block;">無編輯紀錄</em>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 分頁導航 -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.simcard_status', page=pagination.prev_num, pid=request.args.get('pid', ''), iccid=request.args.get('iccid', ''), status=request.args.get('status', ''), group=request.args.get('group', '')) }}">上一頁</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">上一頁</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('main.simcard_status', page=page_num, pid=request.args.get('pid', ''), iccid=request.args.get('iccid', ''), status=request.args.get('status', ''), group=request.args.get('group', '')) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.simcard_status', page=pagination.next_num, pid=request.args.get('pid', ''), iccid=request.args.get('iccid', ''), status=request.args.get('status', ''), group=request.args.get('group', '')) }}">下一頁</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">下一頁</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- 新增 SIM 卡狀態的 Modal -->
+<div class="modal fade" id="addSimCardModal" tabindex="-1" role="dialog" aria-labelledby="addSimCardModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('main.simcard_status') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addSimCardModalLabel">新增 SIM 卡狀態</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+             <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="pid_modal">PID</label>
+            <input type="text" class="form-control" id="pid_modal" name="pid" required>
+          </div>
+          <div class="form-group">
+            <label for="iccid_modal">ICCID</label>
+            <input type="text" class="form-control" id="iccid_modal" name="iccid" required>
+          </div>
+          <div class="form-group">
+            <label for="status_modal">狀態</label>
+            <select class="form-control" id="status_modal" name="status" required>
+                <option value="active">active</option>
+                <option value="suspend">suspend</option>
+                <option value="dead">dead</option>
+              </select>
+          </div>
+          <div class="form-group">
+            <label for="group_modal">Group</label>
+            <input type="text" class="form-control" id="group_modal" name="group">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+          <button type="submit" class="btn btn-primary">提交</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 匯入 CSV 的 Modal -->
+<div class="modal fade" id="importCsvModal" tabindex="-1" role="dialog" aria-labelledby="importCsvModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form action="{{ url_for('main.import_simcard_csv') }}" method="post" enctype="multipart/form-data">
+         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+         <div class="modal-header">
+             <h5 class="modal-title" id="importCsvModalLabel">匯入 CSV</h5>
+             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                 <span aria-hidden="true">&times;</span>
+             </button>
+         </div>
+         <div class="modal-body">
+             <div class="form-group">
+                 <label for="csv_file">選擇 CSV 檔案</label>
+                 <input type="file" class="form-control-file" id="csv_file" name="csv_file" required>
+             </div>
+             <p>請確認 CSV 欄位名稱：original_PID, original_ICCID, new_PID, new_ICCID, status, group</p>
+         </div>
+         <div class="modal-footer">
+             <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+             <button type="submit" class="btn btn-primary">匯入</button>
+         </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    // 切換編輯紀錄的顯示/隱藏
+    document.querySelectorAll('.toggle-edit-records').forEach(button => {
+        button.addEventListener('click', function () {
+            const recordId = this.getAttribute('data-record-id');
+            const editRow = document.getElementById(`edit-records-${recordId}`);
+            if (editRow.style.display === "none" || editRow.style.display === "") {
+                editRow.style.display = "table-row";
+                this.textContent = "隱藏編輯紀錄";
+            } else {
+                editRow.style.display = "none";
+                this.textContent = "顯示編輯紀錄";
+            }
+        });
+    });
+</script>
+
+{% endblock %}

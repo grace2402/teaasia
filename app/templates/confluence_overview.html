@@ -1,0 +1,51 @@
+{# templates/confluence_overview.html #}
+{% extends "base1.html" %}
+{% block title %}專案管理{% endblock %}
+{% block page_content %}
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>專案管理</h2>
+    </div>
+
+    <div class="action-bar">
+        <a href="{{ url_for('main.create_confluence_page') }}" class="btn-gradient">
+            ＋ 新增子頁面
+        </a>
+    </div>
+
+    <div class="card-container" style="padding: 16px 24px;">
+        {% if children %}
+            {% for p in children %}
+            <div class="list-group-item clearfix" style="white-space: nowrap; margin-bottom: 8px; border-radius: 8px;">
+                <div class="pull-left"
+                     style="max-width: 80%;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;">
+                    <a href="{{ base_url }}{{ p._links.webui }}"
+                       target="_blank"
+                       title="{{ p.title }}"
+                       style="font-size: 24.0px !important; color: var(--gradient-start) !important; text-decoration: none;">
+                        {{ p.title }}
+                    </a>
+                </div>
+                <form method="post"
+                      action="{{ url_for('main.delete_confluence_page', page_id=p.id) }}"
+                      class="pull-right"
+                      style="margin: 0; display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit"
+                            class="btn-gradient-sm"
+                            style="background:linear-gradient(135deg,#dc3545,#c82333);"
+                            onclick="return confirm('確定要刪除「{{ p.title }}」嗎？');">
+                      刪除
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="list-group-item text-muted">目前沒有任何子頁面。</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

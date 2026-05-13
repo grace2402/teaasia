@@ -1,0 +1,160 @@
+{% extends "base1.html" %}
+
+{% block title %}
+出差紀錄
+{% endblock %}
+
+{% block page_content %}
+
+<div class="container-fluid mt-4">
+    <div class="page-header-bar">
+        <h2>出差紀錄</h2>
+    </div>
+
+    <!-- 日期篩選表單 -->
+    <form method="GET" action="{{ url_for('main.travel_records') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="date_range_filter">日期篩選</label>
+            <select class="form-control" id="date_range_filter" name="date_range_filter">
+                <option value="none" {% if request.args.get('date_range_filter') == 'none' %}selected{% endif %}>不指定時間段</option>
+                <option value="3days" {% if request.args.get('date_range_filter') == '3days' %}selected{% endif %}>最近 3 天</option>
+                <option value="1week" {% if request.args.get('date_range_filter') == '1week' %}selected{% endif %}>最近 1 週</option>
+                <option value="1month" {% if request.args.get('date_range_filter') == '1month' %}selected{% endif %}>最近 1 個月</option>
+                <option value="6months" {% if request.args.get('date_range_filter') == '6months' %}selected{% endif %}>最近 6 個月</option>
+                <option value="1year" {% if request.args.get('date_range_filter') == '1year' %}selected{% endif %}>最近 1 年</option>
+                <option value="custom" {% if request.args.get('date_range_filter') == 'custom' %}selected{% endif %}>特定時間段</option>
+            </select>
+        </div>
+        <div class="filter-group" id="custom_date_range" style="display: {% if request.args.get('date_range_filter') == 'custom' %}flex{% else %}none{% endif %};">
+            <label for="start_date">開始日期</label>
+            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ request.args.get('start_date') }}">
+        </div>
+        <div class="filter-group" id="custom_date_range_end" style="display: {% if request.args.get('date_range_filter') == 'custom' %}flex{% else %}none{% endif %};">
+            <label for="end_date">結束日期</label>
+            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ request.args.get('end_date') }}">
+        </div>
+        <div class="filter-group">
+            <label for="location_filter">位置</label>
+            <input type="text" class="form-control" id="location_filter" name="location_filter" value="{{ request.args.get('location_filter') or '' }}" placeholder="輸入關鍵字">
+        </div>
+        <div class="filter-group">
+            <label for="description_filter">描述</label>
+            <input type="text" class="form-control" id="description_filter" name="description_filter" value="{{ request.args.get('description_filter') or '' }}" placeholder="輸入關鍵字">
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn-gradient">篩選</button>
+        </div>
+        <div class="filter-group" style="flex: 0 0 auto;">
+            <label>&nbsp;</label>
+            <a href="{{ url_for('main.travel_records') }}" class="btn btn-gradient-sm" style="background:#6c757d;">取消篩選</a>
+        </div>
+    </form>
+
+    <div class="action-bar">
+        <button type="button" class="btn-gradient" data-toggle="modal" data-target="#addRecordModal">
+            新增出差紀錄
+        </button>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th style="white-space: nowrap;">日期時間</th>
+                    <th style="white-space: nowrap;">位置</th>
+                    <th style="white-space: nowrap;">描述</th>
+                    <th style="white-space: nowrap;">執行人</th>
+                    <th style="white-space: nowrap;">現場操作/紀錄</th>
+                    <th style="white-space: nowrap;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in travel_records %}
+                <tr>
+                    <td>{{ record.datetime }}</td>
+                    <td style="word-wrap: break-word;">{{ record.location }}</td>
+                    <td style="word-wrap: break-word;">{{ record.description }}</td>
+                    <td>{{ record.performer }}</td>
+                    <td style="word-wrap: break-word;">{{ record.operation_log }}</td>
+                    <td style="white-space: nowrap;">
+                        <a href="{{ url_for('main.edit_travel_record', record_id=record.id) }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#ffc107,#e0a800);">編輯</a>
+                        <form action="{{ url_for('main.delete_travel_record', record_id=record.id) }}" method="POST" style="display: inline; margin-left:8px;">
+                            {{ form.csrf_token }}
+                            <button type="submit" class="btn-gradient-sm" style="background:linear-gradient(135deg,#dc3545,#c82333);" onclick="return confirm('確定要刪除此出差紀錄嗎？');">刪除</button>
+                        </form>
+                        {% if record.jira_link %}
+                        <a href="{{ record.jira_link }}" class="btn-gradient-sm" style="background:linear-gradient(135deg,#17a2b8,#138496); margin-left:8px;" target="_blank">查看連結</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pagination-wrapper">
+        {% if pagination.has_prev %}
+        <a class="page-link" href="{{ url_for('main.travel_records', page=pagination.prev_num) }}">上一頁</a>
+        {% else %}
+        <span class="page-link disabled">上一頁</span>
+        {% endif %}
+        {% for page_num in pagination.iter_pages() %}
+        {% if page_num %}
+        <a class="page-link {% if page_num == pagination.page %}active{% endif %}" href="{{ url_for('main.travel_records', page=page_num) }}">{{ page_num }}</a>
+        {% else %}
+        <span class="page-link disabled">...</span>
+        {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+        <a class="page-link" href="{{ url_for('main.travel_records', page=pagination.next_num) }}">下一頁</a>
+        {% else %}
+        <span class="page-link disabled">下一頁</span>
+        {% endif %}
+    </div>
+
+    <!-- 新增出差紀錄的彈出表單 -->
+    <div class="modal fade" id="addRecordModal" tabindex="-1" aria-labelledby="addRecordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addRecordModalLabel">新增出差紀錄</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ url_for('main.add_travel_record') }}" method="POST">
+                    {{ form.csrf_token }}
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="datetime">日期時間</label>
+                            <input type="datetime-local" class="form-control" id="datetime" name="datetime" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">位置</label>
+                            <input type="text" class="form-control" id="location" name="location" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="description">描述</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="performer">執行人</label>
+                            <input type="text" class="form-control" id="performer" name="performer" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="operation_log">現場操作/紀錄</label>
+                            <textarea class="form-control" id="operation_log" name="operation_log" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-gradient-sm" data-dismiss="modal" style="background:#6c757d;">取消</button>
+                        <button type="submit" class="btn-gradient">提交</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

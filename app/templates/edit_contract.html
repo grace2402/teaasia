@@ -1,0 +1,44 @@
+{% extends "base1.html" %}
+
+{% block title %}編輯合約{% endblock %}
+
+{% block page_content %}
+<div class="container-fluid">
+<div class="edit-card">
+    <h2>編輯合約</h2>
+    <form method="post" action="">
+        {{ form.hidden_tag() }}
+        <div class="form-group">
+            {{ form.spot_id.label }}
+            {{ form.spot_id(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.warranty_start.label }}
+            {{ form.warranty_start(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.warranty_end.label }}
+            {{ form.warranty_end(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.warranty_amount.label }}
+            {{ form.warranty_amount(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.maintenance_start.label }}
+            {{ form.maintenance_start(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.maintenance_end.label }}
+            {{ form.maintenance_end(class="form-control") }}
+        </div>
+        <div class="form-group">
+            {{ form.link.label }}
+            {{ form.link(class="form-control") }}
+        </div>
+        <button type="submit" class="btn btn-primary">送出</button>
+        <a href="{{ url_for('main.contract_management') }}" class="btn btn-secondary">取消</a>
+    </form>
+</div>
+
+</div>{% endblock %}
