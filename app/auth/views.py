@@ -2,7 +2,7 @@
 
 from flask import render_template, redirect, request, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from ..models import Catalog, User
+from ..models import Catalog, User, Role
 from . import auth
 from .. import db
 from ..email import send_email
@@ -30,23 +30,86 @@ def unconfirmed():
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    # If Google OAuth is configured, redirect to Google sign-in
+    google_oauth = current_app.extensions.get('google_oauth')
+    if google_oauth:
+        from urllib.parse import urlencode
+        
+        # Prevent infinite loop: strip next=/auth/logout before redirecting to Google
+        next_param = request.args.get('next', '') or ''
+        if '/auth/logout' in next_param:
+            next_param = url_for('main.index')
+
+        redirect_uri = url_for('auth.google_callback', _external=True)
+        return google_oauth.google.authorize_redirect(redirect_uri)
+
+    # Fallback to email/password (should not happen in production)
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
         if user is not None and user.verify_password(form.password.data):
             login_user(user, form.remember_me.data)
-            return redirect(request.args.get('next') or url_for('main.index'))
+            # Prevent redirect to logout in fallback path too
+            next_url = request.args.get('next', '') or ''
+            if '/auth/logout' in next_url:
+                next_url = url_for('main.index')
+            return redirect(next_url)
         flash('Invalid username or password.')
     catalogs = Catalog.get_all()
     return render_template('auth/login.html', form=form, catalogs=catalogs)
+
+
+@auth.route('/google/callback')
+def google_callback():
+    google_oauth = current_app.extensions.get('google_oauth')
+    if not google_oauth:
+        flash('Google OAuth 未設定，請聯繫管理員。', 'error')
+        return redirect(url_for('auth.login'))
+
+    try:
+        token = google_oauth.google.authorize_access_token()
+    except Exception as e:
+        current_app.logger.error(f"Google OAuth callback failed: {e}")
+        flash('Google 登入失敗，請重試。', 'error')
+        return redirect(url_for('auth.login'))
+
+    if not token or 'userinfo' not in token:
+        flash('Google 登入失敗：未收到使用者資訊。', 'error')
+        return redirect(url_for('auth.login'))
+
+    userinfo = token['userinfo']
+    email = userinfo.get('email', '')
+    
+    if not email:
+        flash('Google 登入失敗：無法取得 Email。', 'error')
+        return redirect(url_for('auth.login'))
+
+    # Find or create user by email
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        # Auto-create user on first login
+        role = Role.query.filter_by(id=2).first()  # Default to user role
+        user = User(
+            username=userinfo.get('name', email.split('@')[0]),
+            email=email,
+            phone='',
+            add='',
+            role_id=role.id if role else 2,
+            password_hash='oauth_user'  # Placeholder for OAuth users
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    login_user(user)
+    return redirect(request.args.get('next') or url_for('main.index'))
 
 
 @auth.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.')
-    return redirect(url_for('main.index'))
+    flash('您已登出。')
+    return redirect(url_for('auth.login'))
 
 
 @auth.route('/register', methods=['GET', 'POST'])

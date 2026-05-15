@@ -14,8 +14,8 @@ import stripe, os
 from flask import current_app
 
 stripe_keys = {
-  'secret_key': 'sk_test_uxtuIOeAfAyn2AYpImH7Mjft',
-  'publishable_key': 'pk_test_sRa1igLaBVBHhNtVkUPAyBAi'
+  'secret_key': os.environ.get('STRIPE_SECRET_KEY', ''),
+  'publishable_key': os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 }
 stripe.api_key = stripe_keys['secret_key']
 # Normally, if you refer to an undefined variable in a Jinja template,

@@ -94,7 +94,6 @@ nest-asyncio==1.5.8
 openpyxl==3.1.2
 flask-apscheduler==1.13.1
 pandas==2.1.4
-flask-reuploads==1.0.1.dev0
 outcome==1.2.0
 packaging==21.3
 pandocfilters==1.5.0

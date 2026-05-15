@@ -9,7 +9,17 @@ services:
       - REDIS_HOST=teaasia-redis
       - AWS_DEFAULT_REGION=ap-northeast-1
       - AWS_ACCESS_KEY_ID=dummy_cognito_key
-      - AWS_SECRET_ACCESS_KEY=dummy_cognito_secret
+      - AWS_SECRET_ACCESS_KEY=dummy_...cret
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      # GW API Auth: JWT token or API Key (optional, auto-detects from env)
+      # If set, overrides Cognito flow for NDFMS gateway status checking
+      - NDFMS_JWT_TOKEN=
+      # Cognito credentials (fallback auth mode)
+      - USER_POOL_ID=ap-northeast-1_hergR2Uf8
+      - CLIENT_ID=3dheesco103seg2chhf1i34uqr
+      - USERNAME=vip
+      - PASSWORD=link4581
     depends_on:
       teaasia-db:
         condition: service_healthy

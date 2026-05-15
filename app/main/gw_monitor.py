@@ -42,14 +42,14 @@ def _do_check(spot_ids=None):
     """
     from gw_status_checker import GWStatusChecker
     from ..models import Spot
-    from .views import get_jwt_token
 
-    token = get_jwt_token()
-    if not token:
-        current_app.logger.error("[GWMonitor] 無法取得 JWT token，跳過檢查")
+    # New auth flow: auto mode tries env var first, falls back to Cognito
+    try:
+        checker = GWStatusChecker(auth_mode="auto", max_workers=10)
+    except ValueError as e:
+        current_app.logger.error(f"[GWMonitor] 無法取得認證憑證，跳過檢查: {e}")
         return []
 
-    checker = GWStatusChecker(token=token, max_workers=10)
     r = get_redis_client()
 
     # 決定要查哪些 Spot

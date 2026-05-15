@@ -2,22 +2,28 @@
 """
 GWStatusChecker — 獨立模組，用於查詢 NextDrive Gateway 及關聯設備的上下線狀態。
 
+Auth modes (priority order):
+  1. token="direct_jwt" → 直接當 JWT 用（支援 API Key / Service Token）
+  2. token=None + env NDFMS_JWT_TOKEN → 從環境變數讀 JWT
+  3. token=None + Cognito creds → 透過 AWS Cognito 換取 JWT
+
 使用方式：
-    checker = GWStatusChecker(token="your_jwt_token")
+    checker = GWStatusChecker()                              # auto mode (env -> cognito)
+    checker = GWStatusChecker(token="your_jwt_token")        # direct
+    checker = GWStatusChecker(auth_mode="env_jwt")           # read from NDFMS_JWT_TOKEN env var
     
-    # 單一 PID 檢查（含 Device）
     result = checker.check_pid("AAF0808E9F65CE7DA")
-    print(result.status_color)   # 'blue' / 'red' / 'yellow' / 'orange'
-    print(result.gw_online)      # True / False
-    
-    # 批量檢查（多個 PID）
-    results = checker.check_pids(["PID1", "PID2", "PID3"])
 """
 
+import os
 import requests
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import List, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -86,8 +92,15 @@ class GWStatusChecker:
     """
     NextDrive Gateway 狀態檢查器。
 
+    Auth modes (priority order):
+      1. token="direct_jwt" → 直接當 JWT 用（支援 API Key / Service Token）
+      2. auth_mode="env_jwt" → 從環境變數 NDFMS_JWT_TOKEN or NDFMS_API_KEY 讀取
+      3. auth_mode="cognito" → 透過 AWS Cognito 換取 JWT
+      4. auth_mode="auto" (default) → 先嘗試 env，失敗則用 cognito
+
     Args:
-        token: JWT access token（從 Cognito 取得）
+        token: JWT token / API key / None（自動偵測 mode）
+        auth_mode: "direct" | "env_jwt" | "cognito" | "auto"
         base_url: NextDrive API 基底 URL
         timeout: 每個 API 呼叫的超時秒數
         max_workers: 平行檢查的最大執行緒數（預設 10）
@@ -95,15 +108,54 @@ class GWStatusChecker:
 
     BASE_URL = "https://ndp-api.nextdrive.io/v1"
 
-    def __init__(self, token: str, base_url: Optional[str] = None, timeout: int = 5, max_workers: int = 10):
-        self.token = token
+    def __init__(self, token: Optional[str] = None, auth_mode: str = "auto", 
+                 base_url: Optional[str] = None, timeout: int = 5, max_workers: int = 10):
         self.base_url = (base_url or self.BASE_URL).rstrip('/')
         self.timeout = timeout
         self.max_workers = max_workers
+        
+        # Resolve auth token based on mode
+        if token and auth_mode in ("direct", "auto"):
+            # Direct JWT / API Key provided
+            resolved_token = token
+            logger_msg = f"[GWStatusChecker] Using direct token (len={len(resolved_token)})"
+        elif auth_mode == "env_jwt":
+            # Read from environment variable
+            resolved_token = os.environ.get('NDFMS_JWT_TOKEN') or os.environ.get('NDFMS_API_KEY')
+            if not resolved_token:
+                raise ValueError("auth_mode='env_jwt' but neither NDFMS_JWT_TOKEN nor NDFMS_API_KEY is set")
+            logger_msg = f"[GWStatusChecker] Using env JWT token (len={len(resolved_token)})"
+        elif auth_mode == "cognito":
+            # Cognito flow (original)
+            from app.main.views import get_jwt_token as _get_jwt_token
+            resolved_token = _get_jwt_token()
+            if not resolved_token:
+                raise ValueError("Cognito auth failed - no JWT token available")
+            logger_msg = f"[GWStatusChecker] Using Cognito-issued JWT (len={len(resolved_token)})"
+        else:  # auto mode
+            # Try env first, fallback to cognito
+            resolved_token = os.environ.get('NDFMS_JWT_TOKEN') or os.environ.get('NDFMS_API_KEY')
+            if not resolved_token:
+                logger.info("[GWStatusChecker] No env JWT found, trying Cognito flow...")
+                try:
+                    from app.main.views import get_jwt_token as _get_jwt_token
+                    resolved_token = _get_jwt_token()
+                    logger_msg = f"[GWStatusChecker] Using Cognito-issued JWT (len={len(resolved_token)})" if resolved_token else None
+                except Exception as e:
+                    logger.warning(f"[GWStatusChecker] Cognito flow failed: {e}")
+                    raise ValueError("No auth token available: env not set and Cognito credentials missing")
+            else:
+                logger_msg = f"[GWStatusChecker] Using env JWT token (len={len(resolved_token)})"
+
+        self.token = resolved_token
         self.headers = {
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/json",
         }
+        
+        # Log auth method for debugging
+        if logger_msg:
+            logger.info(logger_msg)
 
     # ------------------------------------------------------------------ #
     #  Public API                                                         #
@@ -228,3 +280,4 @@ class GWStatusChecker:
         except Exception as e:
             print(f"[GWStatusChecker] Device fetch error for UUID={gw_uuid}: {e}")
             return []
+

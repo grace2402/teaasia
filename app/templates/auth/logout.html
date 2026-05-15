@@ -1,0 +1,49 @@
+<!-- app/templates/auth/logout.html -->
+{% extends "base.html" %}
+
+{% block title %}已登出 - ByTaiwan{% endblock %}
+
+{% block content %}
+<div class="container">
+    <style>
+        /* Flash modal overlay */
+        .flash-modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(26,26,46,0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100000; animation: flashModalIn 0.3s ease-out;
+        }
+        @keyframes flashModalIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        .flash-modal-card {
+            background: white; border-radius: 24px; padding: 64px 80px; text-align: center;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.35); max-width: 480px; width: 90%;
+        }
+        .flash-modal-card .icon { font-size: 72px; display: block; margin-bottom: 20px; }
+        .flash-modal-card.info .icon { color: #667eea; }
+        .flash-modal-card.success .icon { color: #10b981; }
+        .flash-modal-card.danger .icon { color: #ef4444; }
+        .flash-modal-card h2 { font-size: 36px; margin: 0 0 12px 0; color: #1a1a2e; font-weight: 700; line-height: 1.4; }
+    </style>
+    <div class="flash-modal-overlay" id="flashModal">
+        <div class="flash-modal-card success">
+            <span class="icon">✅</span>
+            <h2>{{ message }}</h2>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var modal = document.getElementById('flashModal');
+    if (!modal) return;
+    // Auto-dismiss after 3 seconds, then redirect to Google login
+    setTimeout(function() {
+        modal.style.transition = 'opacity 0.5s ease-out';
+        modal.style.opacity = '0';
+        setTimeout(function() {
+            window.location.href = '/auth/login?next=' + encodeURIComponent(window.location.pathname);
+        }, 500);
+    }, 3000);
+})();
+</script>
+{% endblock %}

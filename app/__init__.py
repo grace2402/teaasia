@@ -4,12 +4,13 @@ import importlib
 from io import BytesIO
 from datetime import datetime
 from flask import Flask
+from authlib.integrations.flask_client import OAuth
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager
 from flask_mail import Mail
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-from flask_reuploads import UploadSet, IMAGES
+from flask_uploads import UploadSet, IMAGES
 from flask_wtf.csrf import CSRFProtect
 from flask_migrate import Migrate
 from flask_sse import sse
@@ -362,6 +363,28 @@ def create_app(config_name):
     login_manager.init_app(app)
     csrf.init_app(app)
     confluence = ConfluenceClient(app)
+
+    # Google OAuth (Authlib)
+    google_oauth = None
+    client_id = os.environ.get('GOOGLE_CLIENT_ID') or app.config.get('GOOGLE_CLIENT_ID')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET') or app.config.get('GOOGLE_CLIENT_SECRET')
+    if client_id and client_secret:
+        from authlib.integrations.flask_client import OAuth as AuthOAuth
+        oauth_obj = AuthOAuth(app)
+        try:
+            oauth_obj.register(
+                name='google',
+                client_id=client_id,
+                client_secret=client_secret,
+                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+                client_kwargs={'scope': 'openid email profile'}
+            )
+            google_oauth = oauth_obj
+            app.logger.info('Google OAuth initialized.')
+        except Exception as e:
+            app.logger.error(f'Google OAuth init failed: {e}')
+
+    app.extensions['google_oauth'] = google_oauth
     # 藍圖
     from .main import main as main_bp
     app.register_blueprint(main_bp)

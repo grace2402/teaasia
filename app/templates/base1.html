@@ -8,6 +8,7 @@
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
+
     <style>
         :root {
             --gradient-start: #667eea;
@@ -556,9 +557,7 @@
 {% block content %}
 <div class="container-fluid">
     {% for category, message in get_flashed_messages(with_categories=true) %}
-    <div class="alert alert-{{ category }}">{% if category == 'danger' %}
-        <button type="button" class="close" data-dismiss="alert">&times;</button>
-    {% endif %}{{ message }}</div>
+        <div class="alert alert-{{ category }}">{{ message }}</div>
     {% endfor %}
 
     {% block page_content %}{% endblock %}
