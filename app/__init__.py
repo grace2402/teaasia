@@ -133,8 +133,8 @@ def fetch_latest_taipower_excel() -> BytesIO or None:
         scheduler.app.logger.warning('缺少附件，無法解密')
         return None
     if not pw:
-        # 缺少密碼時使用預設密碼
-        pw = 'nextdrive11402'
+        # 缺少密碼時使用預設密碼 (從 .env 讀取)
+        pw = os.environ.get('DEFAULT_EXCEL_PASSWORD', 'nextdrive11402')
         scheduler.app.logger.warning(f'缺少解密密碼，改用預設密碼: {pw}')
 
     bio = BytesIO()
@@ -221,7 +221,7 @@ def import_taipower_excel_records():
     並根據 TaipowermeterApply 記錄呼叫第三方 API。
     """
     scheduler.app.logger.info('【import_taipower_excel】開始執行')
-    TP_KEY_UPDATE_TOKEN = 'hemstw-i-am-hemstw'
+    TP_KEY_UPDATE_TOKEN = os.environ.get('TP_KEY_UPDATE_TOKEN', 'hemstw-i-am-hemstw')
 
     with scheduler.app.app_context():
         bio = fetch_latest_taipower_excel()

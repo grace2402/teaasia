@@ -8,9 +8,9 @@ import msoffcrypto
 import openpyxl
 from io import BytesIO
 
-# 帳號設定
-EMAIL = "skuvy.liang@nextdrive.io"
-PASSWORD = "pnxnmmoddhqmdsci"
+# 帳號設定 (從 .env 讀取)
+EMAIL = os.environ.get('GMAIL_EMAIL', 'skuvy.liang@nextdrive.io')
+PASSWORD = os.environ.get('GMAIL_IMAP_PASSWORD', '')
 SAVE_FOLDER = "taipower_replies"
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
