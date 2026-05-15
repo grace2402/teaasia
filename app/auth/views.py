@@ -109,7 +109,10 @@ def google_callback():
 def logout():
     logout_user()
     flash('您已登出。')
-    return redirect(url_for('auth.login'))
+    # Redirect to index instead of login page, because:
+    # 1. Login page auto-redirects to Google OAuth, hiding the flash message
+    # 2. Prevents infinite loop between login and Google OAuth
+    return redirect(url_for('main.index'))
 
 
 @auth.route('/register', methods=['GET', 'POST'])
